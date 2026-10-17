@@ -47,6 +47,6 @@ engine.browser_run = browser_run
 exec(compile(tree, "<browser build_print adapter>", "exec"), engine.__dict__)
 
 
-async def build_novel():
+async def build_project(bookdir):
     # keep=True exposes the exact generated source files for inspection.
-    await engine.build_print(Path("/book/novel"), keep=True)
+    await engine.build_print(Path(bookdir), keep=True)

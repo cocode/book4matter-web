@@ -4,15 +4,34 @@ const download = document.querySelector('#download');
 const sourceLink = document.querySelector('#sources');
 const output = document.querySelector('#log');
 let urls = [];
-button.addEventListener('click', () => {
+const folder = document.querySelector('#project-folder');
+const uploadButton = document.querySelector('#build-upload');
+const projectInfo = document.querySelector('#project-info');
+let projectFiles = [];
+folder.addEventListener('change', () => {
+  projectFiles = [...folder.files].map(file => ({ file, path: file.webkitRelativePath.split('/').slice(1).join('/') }))
+    .filter(({ path }) => path && !path.split('/').some(part => ['out', '.git', 'node_modules', '.DS_Store'].includes(part)));
+  const hasConfig = projectFiles.some(({ path }) => ['book_metadata.yaml', 'book_style.yaml'].includes(path));
+  uploadButton.disabled = !hasConfig;
+  const name = folder.files[0]?.webkitRelativePath.split('/')[0];
+  projectInfo.textContent = hasConfig ? `${name} · ${projectFiles.length} files selected. Ready to build.`
+    : projectFiles.length ? 'Choose the project folder itself: book_metadata.yaml or book_style.yaml must be directly inside it.' : 'No project selected.';
+});
+button.addEventListener('click', () => build([]));
+uploadButton.addEventListener('click', () => build(projectFiles));
+function build(files) {
   urls.forEach(URL.revokeObjectURL); urls = [];
   download.hidden = sourceLink.hidden = true;
   document.querySelector('#preview-section').hidden = true;
-  output.textContent = ''; button.disabled = true; button.textContent = 'Building your book…';
+  output.textContent = ''; button.disabled = true;
+  if (files.length) uploadButton.textContent = 'Building your book…';
+  else button.textContent = 'Building your book…';
+  uploadButton.disabled = true;
+  folder.disabled = true;
   status.textContent = 'Starting the publishing engines…';
   const started = performance.now();
   const worker = new Worker(new URL('./build-worker.js', import.meta.url), { type: 'module' });
-  const finish = () => { button.disabled = false; button.textContent = 'Build sample PDF ↗'; worker.terminate(); };
+  const finish = () => { button.disabled = false; button.textContent = 'Build sample PDF ↗'; uploadButton.textContent = 'Build my PDF ↗'; uploadButton.disabled = !projectFiles.some(({ path }) => ['book_metadata.yaml', 'book_style.yaml'].includes(path)); folder.disabled = false; worker.terminate(); };
   const fail = message => { status.textContent = 'The build could not finish. See build details below.'; output.textContent += `\n${message}`; document.querySelector('#details').open = true; finish(); };
   worker.onerror = event => fail(event.message || `Worker could not load (${event.filename || 'module initialization'}).`);
   worker.onmessage = ({ data }) => {
@@ -27,5 +46,5 @@ button.addEventListener('click', () => {
       document.querySelector('#preview').src = pdfURL; document.querySelector('#preview-section').hidden = false; finish();
     }
   };
-  worker.postMessage({ type: 'build' });
-});
+  worker.postMessage({ type: 'build', files });
+}
