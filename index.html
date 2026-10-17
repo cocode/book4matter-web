@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter — Browser proof of concept</title><link rel="stylesheet" href="/src/style.css"></head>
+<body><main>
+<header><a href="/" class="brand">Book4matter<span>Browser proof of concept</span></a><span class="local">Processed on your device</span></header>
+<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>A small story.<br>A real book.</h1><p class="lede">Turn the existing novel sample into a print-ready PDF, entirely in your browser.</p></section>
+<section class="workspace" aria-labelledby="sample-title">
+<div class="book"><span>A FABLE</span><h2 id="sample-title">The<br>Smallest<br>Fire</h2><i></i><p>M. R. VALE</p></div>
+<div class="controls"><p class="eyebrow">THE INCLUDED SAMPLE</p><h2>Five chapters. One PDF.</h2><p>The original Book4matter Python rules, Lua filters, and Typst template handle the publishing. Your browser does the work.</p><dl><div><dt>Source</dt><dd>Existing novel sample</dd></div><div><dt>Format</dt><dd>6 × 9 in · Print interior</dd></div><div><dt>Typeface</dt><dd>Libertinus Serif</dd></div></dl><button id="build">Build sample PDF <span aria-hidden="true">↗</span></button><a id="download" hidden>Download PDF ↓</a><p id="status" role="status" aria-live="polite">Ready to build. The first run loads the local publishing engines.</p></div>
+</section>
+<details id="details"><summary>Build details</summary><pre id="log" aria-label="Build log"></pre><a id="sources" hidden>Download generated Typst sources and provenance</a></details>
+<section id="preview-section" hidden><h2>Your book, ready to read.</h2><iframe id="preview" title="Generated novel PDF"></iframe></section>
+<footer>Proof of concept · PDF output from the bundled novel · No manuscript upload or server-side conversion</footer>
+</main><script type="module" src="/src/main.js"></script></body></html>
