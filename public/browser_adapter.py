@@ -1,15 +1,34 @@
-"""Adapt only the CLI's blocking execution boundary; reuse its publishing body.
+"""Adapt the CLI's execution boundary and literal TXT handling for browser PDFs.
 
 Pyodide cannot launch subprocesses. Turn build_print into an async function and
-await its two run() calls, leaving every other statement and helper unchanged.
+await its two run() calls, leaving its publishing body unchanged. Protect TXT
+prose from Lua filters using escaped Typst text with explicit paragraph breaks.
 The checked transformation fails if that execution boundary changes upstream.
 """
 import ast
 import inspect
 import json
+import re
 from pathlib import Path
 import bf.__main__ as engine
 from book4matter_backend import dispatch
+
+
+def literal_print_text(text):
+    """Keep TXT prose opaque to Lua filters as well as Markdown parsing.
+
+    Entity escaping protects Markdown syntax, but Pandoc decodes entities before
+    tracked.lua runs. Raw Typst text preserves literal index/tracked tokens too.
+    A fence longer than any in the input prevents text from closing the block.
+    """
+    fence = "`" * max(3, 1 + max((len(m[0]) for m in re.finditer(r"`+", text)), default=0))
+    paragraphs = re.split(r"\n\s*\n", text.replace("\r\n", "\n"))
+    return "\n\n".join(
+        f'{fence}{{=typst}}\n#text({engine.typst_str(paragraph)})#parbreak()\n{fence}'
+        for paragraph in paragraphs if paragraph.strip())
+
+
+engine.plain_text_markdown = literal_print_text
 
 
 async def browser_run(cmd, **kwargs):

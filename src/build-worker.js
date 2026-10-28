@@ -11,6 +11,7 @@ async function get(path, binary = false) {
 }
 
 async function build(uploadedFiles = []) {
+  if (!uploadedFiles.length) throw new Error('Choose a Book4matter project folder first.');
   log('Loading local Python and publishing assets…');
   const runtimeURL = new URL('/runtime/pyodide/pyodide.mjs', self.location).href;
   const { loadPyodide } = await import(/* @vite-ignore */ runtimeURL);
@@ -18,9 +19,9 @@ async function build(uploadedFiles = []) {
     stdout: log, stderr: log });
   await python.loadPackage('pyyaml');
   const manifest = JSON.parse(await get('/assets.json'));
-  const assetPaths = manifest.files.filter(path => !uploadedFiles.length || !path.startsWith('book4matter/novel/'));
+  const assetPaths = manifest.files;
   const assets = new Map(await Promise.all(assetPaths.map(async path => [path, await get(`/${path}`, true)])));
-  const projectRoot = uploadedFiles.length ? '/book/project' : '/book/novel';
+  const projectRoot = '/book/project';
   const provenance = Object.fromEntries(assetPaths.map(path => [path, manifest.hashes[path]]));
   const fs = python.FS;
   const write = (path, bytes) => {

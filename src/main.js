@@ -1,4 +1,3 @@
-const button = document.querySelector('#build');
 const status = document.querySelector('#status');
 const download = document.querySelector('#download');
 const sourceLink = document.querySelector('#sources');
@@ -17,21 +16,19 @@ folder.addEventListener('change', () => {
   projectInfo.textContent = hasConfig ? `${name} · ${projectFiles.length} files selected. Ready to build.`
     : projectFiles.length ? 'Choose the project folder itself: book_metadata.yaml or book_style.yaml must be directly inside it.' : 'No project selected.';
 });
-button.addEventListener('click', () => build([]));
 uploadButton.addEventListener('click', () => build(projectFiles));
 function build(files) {
   urls.forEach(URL.revokeObjectURL); urls = [];
   download.hidden = sourceLink.hidden = true;
   document.querySelector('#preview-section').hidden = true;
-  output.textContent = ''; button.disabled = true;
-  if (files.length) uploadButton.textContent = 'Building your book…';
-  else button.textContent = 'Building your book…';
+  output.textContent = '';
+  uploadButton.textContent = 'Building your book…';
   uploadButton.disabled = true;
   folder.disabled = true;
   status.textContent = 'Starting the publishing engines…';
   const started = performance.now();
   const worker = new Worker(new URL('./build-worker.js', import.meta.url), { type: 'module' });
-  const finish = () => { button.disabled = false; button.textContent = 'Build sample PDF ↗'; uploadButton.textContent = 'Build my PDF ↗'; uploadButton.disabled = !projectFiles.some(({ path }) => ['book_metadata.yaml', 'book_style.yaml'].includes(path)); folder.disabled = false; worker.terminate(); };
+  const finish = () => { uploadButton.textContent = 'Build my PDF ↗'; uploadButton.disabled = !projectFiles.some(({ path }) => ['book_metadata.yaml', 'book_style.yaml'].includes(path)); folder.disabled = false; worker.terminate(); };
   const fail = message => { status.textContent = 'The build could not finish. See build details below.'; output.textContent += `\n${message}`; document.querySelector('#details').open = true; finish(); };
   worker.onerror = event => fail(event.message || `Worker could not load (${event.filename || 'module initialization'}).`);
   worker.onmessage = ({ data }) => {

@@ -12,10 +12,10 @@ RUN node scripts/prepare-runtime.mjs
 # Supply the existing checkout as a named, read-only build context.
 COPY --from=publishing /bf ./public/book4matter/bf
 COPY --from=publishing /templates ./public/book4matter/templates
-COPY --from=publishing /novel/book_metadata.yaml ./public/book4matter/novel/book_metadata.yaml
-COPY --from=publishing /novel/chapters ./public/book4matter/novel/chapters
-COPY --from=publishing /example/book_metadata.yaml /example/book_style.yaml ./public/book4matter/example/
-COPY --from=publishing /example/chapters ./public/book4matter/example/chapters
+COPY --from=publishing /novel/book_metadata.yaml ./fixtures/novel/book_metadata.yaml
+COPY --from=publishing /novel/chapters ./fixtures/novel/chapters
+COPY --from=publishing /example/book_metadata.yaml /example/book_style.yaml ./fixtures/example/
+COPY --from=publishing /example/chapters ./fixtures/example/chapters
 COPY . .
 RUN node scripts/prepare-project.mjs
 RUN npm run check:runtime

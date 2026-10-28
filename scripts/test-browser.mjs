@@ -25,7 +25,10 @@ try {
   page.on('requestfailed', request => console.error('[requestfailed]', request.url(), request.failure()));
   page.on('response', response => { if (response.status() >= 400) console.error('[http]', response.status(), response.url()); });
   await page.goto('http://127.0.0.1:5173');
-  await page.getByRole('button', { name: /Build sample PDF/ }).click();
+  assert.equal(await page.getByRole('button', { name: /Build sample PDF/ }).count(), 0);
+  assert.match(await page.locator('.lede').innerText(), /Book4matter turns plain text and Markdown/);
+  await page.locator('#project-folder').setInputFiles('/app/fixtures/novel');
+  await page.locator('#build-upload').click();
   const downloadLink = page.locator('#download');
   await page.waitForFunction(() => !document.querySelector('#download').hidden || document.querySelector('#status').textContent.includes('could not finish'), null, { timeout: 180000 });
   if (!(await downloadLink.isVisible())) throw new Error(await page.locator('#log').innerText());
@@ -77,7 +80,7 @@ try {
   await page.screenshot({ path: `${output}/browser-mobile.png`, fullPage: true });
   // Upload a real folder with distinct content, a media asset, and local fonts.
   const fixture = await mkdtemp('/tmp/book4matter-upload-');
-  await cp('public/book4matter/novel/chapters', `${fixture}/chapters`, { recursive: true });
+  await cp('fixtures/novel/chapters', `${fixture}/chapters`, { recursive: true });
   await mkdir(`${fixture}/media`);
   await mkdir(`${fixture}/fonts`);
   await writeFile(`${fixture}/book_metadata.yaml`, 'title: Uploaded Garden\nauthor: Upload Tester\n');
@@ -85,7 +88,9 @@ try {
   await cp('public/runtime/fonts/LiberationSerif-Regular.ttf', `${fixture}/fonts/LocalSerif.ttf`);
   await writeFile(`${fixture}/media/garden.svg`, '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="#304b3e"/></svg>');
   const chapter = await readFile(`${fixture}/chapters/01.txt`, 'utf8');
-  await writeFile(`${fixture}/chapters/01.txt`, `${chapter}\n\nThis passage exists only in the uploaded project.\n\n![](../media/garden.svg){width="1in"}\n`);
+  await writeFile(`${fixture}/chapters/01.txt`, `${chapter}\n\nThis passage exists only in the uploaded project.\n\n# Literal heading\n\n**literal bold** and _literal emphasis_\n\n[literal link](https://example.com)\n\n[[literal term]]\n\n{index:term}\n\n    indented literal prose\n`);
+  // Markdown chapters still support formatting and media in the same project.
+  await writeFile(`${fixture}/chapters/06.md`, '# Markdown chapter\n\n**Formatted Markdown**\n\n![](../media/garden.svg){width="1in"}\n');
   const invalid = await mkdtemp('/tmp/book4matter-invalid-');
   await writeFile(`${invalid}/chapter.md`, '# Missing configuration');
   await page.locator('#project-folder').setInputFiles(invalid);
@@ -107,6 +112,14 @@ try {
   assert.match(uploadedText, /Uploaded Garden/);
   assert.match(uploadedText, /Upload Tester/);
   assert.match(uploadedText, /This passage exists only in the uploaded project/);
+  assert.match(uploadedText, /# Literal heading/);
+  assert.match(uploadedText, /\*\*literal bold\*\* and _literal emphasis_/);
+  assert.match(uploadedText, /\[literal link\]\(https:\/\/example.com\)/);
+  assert.match(uploadedText, /\[\[literal term\]\]/);
+  assert.match(uploadedText, /\{index:term\}/);
+  assert.match(uploadedText, /indented literal prose/);
+  assert.match(uploadedText, /Formatted Markdown/);
+  assert.doesNotMatch(uploadedText, /\*\*Formatted Markdown\*\*|!\[\]/);
   const uploadedFonts = (await exec('pdffonts', [`${output}/${uploaded.suggestedFilename()}`])).stdout;
   assert.match(uploadedFonts, /LiberationSerif/);
   assert.deepEqual(requests, [], 'Uploading the folder sent data to the server');
@@ -114,6 +127,49 @@ try {
   await page.setViewportSize({ width: 1200, height: 1100 });
   await page.screenshot({ path: `${output}/upload-browser.png`, fullPage: true });
   await exec('pdftoppm', ['-f', '3', '-l', '3', '-scale-to', '1100', '-png', `${output}/${uploaded.suggestedFilename()}`, `${output}/upload-page`]);
-  console.log('PASS: folder selection, invalid-folder feedback, uploaded text/media/font PDF, no data upload');
+  // Terms coexist with tracked items, including aliases, nested entries,
+  // repeated definitions, heading terms (also copied into the TOC), and links.
+  const indexed = await mkdtemp('/tmp/book4matter-index-');
+  await mkdir(`${indexed}/chapters`);
+  await writeFile(`${indexed}/book_metadata.yaml`, 'title: Indexed Book\nauthor: Index Tester\ntoc: true\ntracked:\n  exercise: Exercise\n');
+  await writeFile(`${indexed}/chapters/01.md`, [
+    '# Index examples', '', '## [[Frame]]', '',
+    '[[zebra]] [[Alpha]] [[alpha]] [[Richard Powers|Powers, Richard]]', '',
+    '[[polka hold|Practice hold>polka]] [[waltz hold|Practice hold>waltz]]', '',
+    '[[[R. Powers|Powers, Richard]]](https://www.richardpowers.com)', '',
+    '{exercise:first:def First exercise}', '', '{exercise:first}', '',
+    '## Index {.section}', '', '{index:term}', '', '{index:exercise}', '',
+  ].join('\n'));
+  await page.locator('#project-folder').setInputFiles(indexed);
+  await page.locator('#build-upload').click();
+  await page.waitForFunction(() => !document.querySelector('#download').hidden || document.querySelector('#status').textContent.includes('could not finish'), null, { timeout: 180000 });
+  if (!(await downloadLink.isVisible())) throw new Error(await page.locator('#log').innerText());
+  const indexDownloadEvent = page.waitForEvent('download');
+  await downloadLink.click();
+  const indexDownload = await indexDownloadEvent;
+  const indexPdf = `${output}/${indexDownload.suggestedFilename()}`;
+  await indexDownload.saveAs(indexPdf);
+  const indexText = (await exec('pdftotext', ['-layout', indexPdf, '-'])).stdout;
+  await writeFile(`${output}/index.txt`, indexText);
+  const indexSection = indexText.slice(indexText.lastIndexOf('Alpha'));
+  assert.match(indexSection, /Alpha\s*\.+\s*\d/);
+  assert.match(indexSection, /Frame\s*\.+\s*\d/);
+  assert.match(indexSection, /Powers, Richard\s*\.+\s*\d/);
+  assert.match(indexSection, /Practice hold/);
+  assert.ok(indexSection.indexOf('polka') < indexSection.indexOf('waltz'));
+  assert.ok(indexSection.indexOf('Powers, Richard') < indexSection.indexOf('zebra'));
+  assert.match(indexSection, /First exercise/);
+  assert.doesNotMatch(indexText, /\[\[|\{index:|\{exercise:/);
+  const indexSourcesEvent = page.waitForEvent('download');
+  await page.locator('#sources').click();
+  await (await indexSourcesEvent).saveAs(`${output}/index-build.json`);
+  const indexBuild = JSON.parse(await readFile(`${output}/index-build.json`, 'utf8'));
+  assert.match(indexBuild.sources['_body.typ'], /termdef, termindex/);
+  assert.match(indexBuild.sources['_body.typ'], /#termindex\(\)/);
+  assert.match(indexBuild.sources['_body.typ'], /#termdef\("powers, richard"/);
+  assert.deepEqual(externalRequests, [], 'Indexed project requested an external service');
+  assert.deepEqual(requests, [], 'Indexed project sent data to the server');
+  console.log('PASS: term index PDF, aliases, subentries, heading/TOC terms, repeated terms, outbound links, tracked items');
+  console.log('PASS: folder selection, invalid-folder feedback, literal TXT alongside Markdown/media/fonts, no data upload');
   console.log(`PASS: browser-generated PDF (${pdf.length} bytes), no external requests`);
 } finally { await browser?.close(); server.kill('SIGTERM'); }

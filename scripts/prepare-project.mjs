@@ -1,5 +1,20 @@
-import { readdir, writeFile, readFile } from 'node:fs/promises';
+import { readdir, writeFile, readFile, cp, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+
+// Refresh the shared engine and templates without rebuilding/installing runtimes.
+// Docker builds already copy these from their named publishing context.
+const publishing = process.argv[2];
+if (publishing) {
+  for (const directory of ['bf', 'templates']) {
+    await readdir(`${publishing}/${directory}`);
+  }
+  for (const directory of ['bf', 'templates']) {
+    const destination = `public/book4matter/${directory}`;
+    await rm(destination, { recursive: true, force: true });
+    await cp(`${publishing}/${directory}`, destination, { recursive: true,
+      filter: path => !['__pycache__', 'out'].includes(path.split('/').at(-1)) });
+  }
+}
 
 async function walk(root) {
   const files = [];
@@ -12,7 +27,7 @@ async function walk(root) {
   return files.sort();
 }
 const files = [];
-for (const root of ['book4matter/bf', 'book4matter/templates', 'book4matter/novel', 'runtime/fonts', 'runtime/wrap-it']) {
+for (const root of ['book4matter/bf', 'book4matter/templates', 'runtime/fonts', 'runtime/wrap-it']) {
   files.push(...await walk(root));
 }
 const hashes = {};

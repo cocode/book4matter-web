@@ -3,21 +3,17 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter — Browser proof of concept</title><link rel="stylesheet" href="/src/style.css"></head>
 <body><main>
 <header><a href="/" class="brand">Book4matter<span>Browser proof of concept</span></a><span class="local">Processed on your device</span></header>
-<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>A small story.<br>A real book.</h1><p class="lede">Build the sample or choose your own Book4matter project. Generate a PDF entirely in your browser.</p></section>
-<section class="workspace" aria-labelledby="sample-title">
-<div class="book"><span>A FABLE</span><h2 id="sample-title">The<br>Smallest<br>Fire</h2><i></i><p>M. R. VALE</p></div>
-<div class="controls"><p class="eyebrow">THE INCLUDED SAMPLE</p><h2>Five chapters. One PDF.</h2><p>The original Book4matter Python rules, Lua filters, and Typst template handle the publishing. Your browser does the work.</p><dl><div><dt>Source</dt><dd>Existing novel sample</dd></div><div><dt>Format</dt><dd>6 × 9 in · Print interior</dd></div><div><dt>Typeface</dt><dd>Libertinus Serif</dd></div></dl><button id="build">Build sample PDF <span aria-hidden="true">↗</span></button></div>
-</section>
+<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>Your words.<br>Ready for print.</h1><p class="lede">Book4matter turns plain text and Markdown manuscripts into formatted books, handling typography, chapter layout, and page numbering. Choose your project folder to create a print-ready PDF in your browser.</p></section>
 <section class="upload" aria-labelledby="upload-title">
-<p class="eyebrow">TRY YOUR OWN BOOK</p><h2 id="upload-title">Choose a project folder.</h2>
+<p class="eyebrow">BUILD YOUR BOOK</p><h2 id="upload-title">Choose a project folder.</h2>
 <p>Select the folder containing <code>book_metadata.yaml</code> or <code>book_style.yaml</code>, plus your chapters. Images in <code>media/</code> and fonts in <code>fonts/</code> are included. Files stay on your device.</p>
 <label class="folder-label" for="project-folder">Choose project folder</label>
 <input id="project-folder" type="file" webkitdirectory multiple aria-describedby="project-info">
 <p id="project-info" role="status">No project selected.</p>
 <button id="build-upload" disabled>Build my PDF ↗</button>
 </section>
-<section class="build-result" aria-label="Build result"><a id="download" hidden>Download PDF ↓</a><p id="status" role="status" aria-live="polite">Ready to build. The first run loads the local publishing engines.</p></section>
+<section class="build-result" aria-label="Build result"><a id="download" hidden>Download PDF ↓</a><p id="status" role="status" aria-live="polite">Choose a project folder to get started.</p></section>
 <details id="details"><summary>Build details</summary><pre id="log" aria-label="Build log"></pre><a id="sources" hidden>Download generated Typst sources and provenance</a></details>
-<section id="preview-section" hidden><h2>Your book, ready to read.</h2><iframe id="preview" title="Generated novel PDF"></iframe></section>
+<section id="preview-section" hidden><h2>Your book, ready to read.</h2><iframe id="preview" title="Generated book PDF"></iframe></section>
 <footer>Proof of concept · PDF output · Your files stay in the browser · No server-side conversion</footer>
 </main><script type="module" src="/src/main.js"></script></body></html>

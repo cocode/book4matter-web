@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0 --configLoader native",
     "build": "vite build --configLoader native",
     "preview": "vite preview --host 0.0.0.0 --configLoader native",
-    "check:runtime": "node scripts/check-runtime.mjs"
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "test:browser": "node scripts/test-browser.mjs"
   },
   "dependencies": {
     "@myriaddreamin/typst-ts-web-compiler": "0.7.0",
