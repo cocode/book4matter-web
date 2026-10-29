@@ -8,9 +8,16 @@ import { inflateRawSync } from 'node:zlib';
 
 const format = process.argv[2];
 if (!format) {
+  const failed = [];
   for (const target of ['print', 'screen', 'html', 'epub', 'defaults']) {
-    execFileSync(process.execPath, [import.meta.filename, target], { stdio: 'inherit', timeout: 180000 });
+    try {
+      execFileSync(process.execPath, [import.meta.filename, target], { stdio: 'inherit', timeout: 180000 });
+    } catch (error) {
+      failed.push(target);
+      console.error(`FAIL: ${target} (${error.code || error.signal || `exit ${error.status}`})`);
+    }
   }
+  assert.deepEqual(failed, [], `Format checks failed: ${failed.join(', ')}`);
 } else {
   const { buildBook } = await import('../src/build-book.js');
   const root = new URL('../public/', import.meta.url);
@@ -38,7 +45,9 @@ if (!format) {
   if (['print', 'screen', 'defaults'].includes(format)) {
     assert.equal(new TextDecoder().decode(result.bytes.slice(0, 5)), '%PDF-');
     assert.match(result.sources['_body.typ'], /LITERAL_CONTENT/);
-    assert.match(result.sources['_body.typ'], /MARKDOWN_CONTENT/);
+    // Pandoc escapes Markdown's underscore in Typst source. Literal TXT is
+    // emitted as #text("...") above, where the underscore stays unescaped.
+    assert.match(result.sources['_body.typ'], /MARKDOWN\\_CONTENT/);
     assert.match(result.sources['_body.typ'], /\/art\/garden.svg/);
     assert.match(result.sources['_meta.typ'], format === 'screen' ? /links: "live"/ : /links: "print"/);
     assert.match(result.sources['_meta.typ'], format === 'screen' ? /cover: "\/art\/garden.svg"/ : /cover: none/);
