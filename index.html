@@ -2,18 +2,32 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter — Browser proof of concept</title><link rel="stylesheet" href="/src/style.css"></head>
 <body><main>
-<header><a href="%BASE_URL%" class="brand">Book4matter<span>Browser proof of concept</span></a><span class="local">Processed on your device</span></header>
-<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>Your words.<br>Ready for print.</h1><p class="lede">Book4matter turns plain text and Markdown manuscripts into formatted books, handling typography, chapter layout, and page numbering. Choose your project folder to create a print-ready PDF in your browser.</p></section>
+<header><a href="%BASE_URL%" class="brand">Book4matter<span>Browser proof of concept</span></a><div class="header-links"><a href="https://book4matter.com/" target="_blank" rel="noopener noreferrer">About Book4matter ↗</a><span class="local">Processed on your device</span></div></header>
+<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>Your words.<br>Ready to publish.</h1><p class="lede">Book4matter turns plain text and Markdown manuscripts into formatted books, handling typography, chapter layout, and page numbering. Add your chapters and create a book for print, screens, or an e-reader. Everything happens in your browser.</p></section>
 <section class="upload" aria-labelledby="upload-title">
-<p class="eyebrow">BUILD YOUR BOOK</p><h2 id="upload-title">Choose a project folder.</h2>
-<p>Select the folder containing <code>book_metadata.yaml</code> or <code>book_style.yaml</code>, plus your chapters. Images in <code>media/</code> and fonts in <code>fonts/</code> are included. Files stay on your device.</p>
-<label class="folder-label" for="project-folder">Choose project folder</label>
-<input id="project-folder" type="file" webkitdirectory multiple aria-describedby="project-info">
-<p id="project-info" role="status">No project selected.</p>
-<button id="build-upload" disabled>Build my PDF ↗</button>
+<p class="eyebrow">BUILD YOUR BOOK</p><h2 id="upload-title">Start with your chapters.</h2>
+<p>Add Markdown (.md) or plain text (.txt) files, in as many batches as you like. Add images, fonts, <code>book_metadata.yaml</code>, or <code>book_style.yaml</code> if you have them. Settings are optional.</p>
+<div id="drop-zone" class="drop-zone" role="group" aria-label="Add manuscript files" aria-describedby="upload-help">
+<p class="drop-heading">Drop your files or folders here</p>
+<p id="upload-help">Chapters now, settings later. Your files stay on your device.</p>
+<div class="file-pickers">
+<label class="file-picker">Add files<input id="project-files" type="file" multiple aria-label="Add files" aria-describedby="project-info"></label>
+<label class="file-picker secondary">Add a folder<input id="project-folder" type="file" webkitdirectory multiple aria-label="Add a folder" aria-describedby="project-info"></label>
+</div>
+</div>
+<p id="project-info" role="status">No files added yet.</p>
+<p id="upload-message" role="status"></p>
+<details id="added-files" hidden><summary>Review added files</summary><ul id="file-list"></ul><button id="clear-files" type="button" class="secondary" disabled>Clear files</button></details>
+<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise all .md and .txt files are included.</p>
+<div class="format-grid" role="group" aria-label="Choose an output format">
+<button id="build-upload" data-format="print" disabled>Build my print PDF <span>Print interior, ready for binding</span></button>
+<button data-format="screen" disabled>Build my screen PDF <span>Clickable links and optional cover</span></button>
+<button data-format="html" disabled>Build my HTML <span>A single page to read in a browser</span></button>
+<button data-format="epub" disabled>Build my EPUB <span>Reflowable text for e-readers</span></button>
+</div>
 </section>
-<section class="build-result" aria-label="Build result"><a id="download" hidden>Download PDF ↓</a><p id="status" role="status" aria-live="polite">Choose a project folder to get started.</p></section>
-<details id="details"><summary>Build details</summary><pre id="log" aria-label="Build log"></pre><a id="sources" hidden>Download generated Typst sources and provenance</a></details>
+<section class="build-result" aria-label="Build result"><a id="download" hidden>Download PDF ↓</a><p id="status" role="status" aria-live="polite">Add your chapters to get started.</p></section>
+<details id="details"><summary>Build details</summary><pre id="log" aria-label="Build log"></pre><a id="sources" hidden>Download build sources and details</a></details>
 <section id="preview-section" hidden><h2>Your book, ready to read.</h2><iframe id="preview" title="Generated book PDF"></iframe></section>
-<footer>Proof of concept · PDF output · Your files stay in the browser · No server-side conversion</footer>
+<footer>PDF · HTML · EPUB · Your files stay in the browser · No server-side conversion</footer>
 </main><script type="module" src="/src/main.js"></script></body></html>

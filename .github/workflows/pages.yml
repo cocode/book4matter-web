@@ -48,6 +48,11 @@ jobs:
         run: node scripts/prepare-project.mjs .publishing
       - name: Check publishing runtimes
         run: npm run check:runtime
+      - name: Test file selection and browser output formats
+        run: |
+          node --test scripts/test-uploads.mjs
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-adapter.py .publishing
+          node scripts/test-formats.mjs
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
