@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || '/',
   assetsInclude: ['**/*.wasm'],
   // Keep application/dependency files read-only for the unprivileged server.
   cacheDir: `/tmp/book4matter-vite-${process.pid}`,

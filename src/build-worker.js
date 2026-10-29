@@ -3,9 +3,12 @@ import { createTypstCompiler, CompileFormatEnum } from '@myriaddreamin/typst.ts/
 import { loadFonts, withPackageRegistry } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 
 const encoder = new TextEncoder();
+// The worker bundle lives in assets/, while public files use the site's base.
+const appURL = new URL(import.meta.env.BASE_URL, self.location.origin);
+const assetURL = path => new URL(path, appURL).href;
 const log = message => postMessage({ type: 'log', message });
 async function get(path, binary = false) {
-  const response = await fetch(path);
+  const response = await fetch(assetURL(path));
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
   return binary ? new Uint8Array(await response.arrayBuffer()) : response.text();
 }
@@ -13,14 +16,14 @@ async function get(path, binary = false) {
 async function build(uploadedFiles = []) {
   if (!uploadedFiles.length) throw new Error('Choose a Book4matter project folder first.');
   log('Loading local Python and publishing assets…');
-  const runtimeURL = new URL('/runtime/pyodide/pyodide.mjs', self.location).href;
+  const runtimeURL = assetURL('runtime/pyodide/pyodide.mjs');
   const { loadPyodide } = await import(/* @vite-ignore */ runtimeURL);
-  const python = await loadPyodide({ indexURL: new URL('/runtime/pyodide/', self.location).href,
+  const python = await loadPyodide({ indexURL: assetURL('runtime/pyodide/'),
     stdout: log, stderr: log });
   await python.loadPackage('pyyaml');
-  const manifest = JSON.parse(await get('/assets.json'));
+  const manifest = JSON.parse(await get('assets.json'));
   const assetPaths = manifest.files;
-  const assets = new Map(await Promise.all(assetPaths.map(async path => [path, await get(`/${path}`, true)])));
+  const assets = new Map(await Promise.all(assetPaths.map(async path => [path, await get(path, true)])));
   const projectRoot = '/book/project';
   const provenance = Object.fromEntries(assetPaths.map(path => [path, manifest.hashes[path]]));
   const fs = python.FS;
@@ -39,8 +42,8 @@ async function build(uploadedFiles = []) {
     write(`${projectRoot}/${path}`, bytes);
     provenance[`uploaded/${path}`] = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(value => value.toString(16).padStart(2, '0')).join('');
   }
-  write('/book/browser_adapter.py', await get('/browser_adapter.py', true));
-  const wasm = await get('/runtime/pandoc.wasm', true);
+  write('/book/browser_adapter.py', await get('browser_adapter.py', true));
+  const wasm = await get('runtime/pandoc.wasm', true);
   let compiler;
   const walk = root => fs.readdir(root).filter(name => !['.', '..'].includes(name)).flatMap(name => {
     const path = `${root}/${name}`;
@@ -103,7 +106,7 @@ async function build(uploadedFiles = []) {
           if (spec.namespace === 'preview' && spec.name === 'wrap-it' && spec.version === '0.1.1') return '/packages/wrap-it';
           throw new Error(`Package not bundled: ${spec.namespace}/${spec.name}:${spec.version}`);
         } };
-        await compiler.init({ getModule: () => get('/runtime/typst.wasm', true),
+        await compiler.init({ getModule: () => get('runtime/typst.wasm', true),
           beforeBuild: [loadFonts(fonts, { assets: false }), withPackageRegistry(registry)] });
         for (const [name, bytes] of assets) {
           if (name.startsWith('runtime/wrap-it/')) compiler.mapShadow('/packages/wrap-it/' + name.split('/').at(-1), bytes);

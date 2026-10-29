@@ -6,11 +6,75 @@ concept creates print-interior PDFs from a selected Book4matter project folder,
 with a preview and build log. Publishing runs in a Web Worker on the user's
 device. The server serves static files only.
 
-All dependency installation and runtime/font downloads happen while building
-Docker images. Nothing is installed on the host. The browser loads its engines,
-fonts, Python wheel, templates, and sources from the app's own origin.
+GitHub Actions builds the static site on a disposable GitHub-hosted runner and
+deploys it to GitHub Pages. No local installation or Docker build is needed for
+deployment. The browser loads its engines, fonts, Python wheel, templates, and
+sources from the app's own origin.
 
-## Build and run
+## GitHub Pages deployment
+
+The site URL is [https://cocode.github.io/book4matter-web/](https://cocode.github.io/book4matter-web/).
+In repository **Settings → Pages → Build and deployment**, select **GitHub
+Actions** as the source. Allow the `main` branch in the `github-pages`
+environment's deployment rules. Commit the workflow, lockfile, and supporting
+files together, then push to `main`; subsequent pushes rebuild and deploy.
+The workflow can also be started from **Actions → Build and deploy GitHub
+Pages → Run workflow**. Only `main` may deploy.
+
+`.github/workflows/pages.yml` runs these steps entirely on GitHub:
+
+1. Check out the app and the pinned `cocode/Book4matter` publishing sources.
+2. Set up the exact Node/npm versions and validate the reviewed dependency pins.
+3. Run `npm audit` against the lockfile, then `npm ci --ignore-scripts`.
+4. Prepare checksum-verified runtimes, fonts, and templates, then run the runtime smoke checks.
+5. Build with Vite using the base path supplied by Pages and verify the generated assets.
+6. Upload `dist/` and deploy it using the Pages environment.
+
+The deployed site is static; Node and the build tools run only during CI.
+The base path also applies to the Web Worker, Pyodide, WASM, asset manifest,
+and home link. Local development still defaults to `/`. A repository rename
+or Pages custom domain is reflected by the next build's Pages metadata.
+
+## Dependency review
+
+The review dated **October 28, 2026** is recorded in
+`scripts/dependency-review.json`. It contains exact versions, release dates,
+registry integrity values, Action commit SHAs, and advisory-check sources.
+The normal release cutoff is **September 28, 2026**. The approved exceptions
+are security fixes:
+
+| Component | Pin | Reason for newer release |
+| --- | --- | --- |
+| Node.js | 24.22.1 | [October Node.js security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) |
+| Vite | 8.3.3 | [October Vite security fixes](https://github.com/vitejs/vite/security/advisories/GHSA-rq7h-c2jc-7f22) |
+| source-map-js | 1.2.2 | [Indexed source-map denial-of-service fix](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) |
+
+The final checks found no matching npm advisories for the 69 locked package
+versions or bundled npm 11.19.1, no matching GitHub Actions advisories for the
+selected releases (including the nested upload action), and no OSV advisories
+for PyYAML 6.0.3. Pyodide and typst.ts returned no published repository
+security advisories. These checks do not independently audit every native
+library embedded in WASM or establish the absence of unknown vulnerabilities.
+
+CI fails if dependency pins differ from the review, asset checksums differ,
+or the current npm audit reports any severity of vulnerability. Node, Actions,
+and non-npm runtime advisory checks are recorded as of the review date and
+should be repeated when updating pins. `npm run check:pins` is a read-only
+metadata check and does not install dependencies. The hosted Ubuntu image and
+GitHub's action runtime are maintained by GitHub; the workflow installs no apt
+packages and pins all explicitly selected build dependencies.
+
+`scripts/runtime-assets.json` pins the PyYAML wheel, Libertinus fonts,
+Liberation fonts 2.1.5, and wrap-it 0.1.1 with SHA-256 checksums. Template/font
+sources use immutable commits or a fixed release archive. The publishing
+checkout is first-party application source pinned to commit
+`643c927d6a49b8c5a60d4764d535cdda5f2e485c`; local uncommitted publishing changes
+are not included in deployment. Updating it is a separate source change.
+
+## Existing Docker development setup
+
+The following setup is separate from the GitHub Pages workflow. Deployment
+does not run these commands.
 
 From this checkout, with the existing publishing repository beside it:
 
@@ -87,9 +151,9 @@ is unchanged. The wrapper has a flat filesystem, so the adapter gives the
 processed chapters and filter files unique basenames. Unknown command flags
 fail explicitly; this adapter supports the print PDF command, including project font paths.
 
-The image contains a static `dist/` directory that can be copied out for static
-hosting. Hosting at a subdirectory such as `/app/` is not yet configured; this
-prototype uses origin-root URLs. No deployment is performed.
+The build produces a static `dist/` directory suitable for static hosting.
+Set `VITE_BASE_PATH` at build time to serve it beneath a subdirectory such as
+`/book4matter-web/`; GitHub Actions sets this from the Pages configuration.
 
 ## Verification in Docker
 
@@ -144,7 +208,7 @@ projects still need broader compatibility testing. Browser PDF preview depends o
 download works independently. The known PDF-only novel/no-parts preprocessing
 limitation is unchanged.
 
-The Docker Node base is pinned by digest and npm dependencies by lockfile.
-PyYAML is verified against Pyodide's package checksum. Fonts use the Typst
-assets v0.13.1 release; wrap-it uses the existing 0.1.1 package sources. Debian
-packages in the development/test images follow the configured Debian mirrors.
+The existing Docker Node base is pinned by digest and npm dependencies by
+lockfile. Its Debian packages follow the configured mirrors. GitHub Pages
+uses the separate, reviewed CI pins and checksum-verified assets described
+above, without building either Docker image.

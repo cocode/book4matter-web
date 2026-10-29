@@ -1,22 +1,32 @@
-import { readFile, mkdir, copyFile, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, copyFile, writeFile, cp, mkdtemp, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-// Download PyYAML at image-build time so Pyodide can load it locally.
+const pinned = JSON.parse(await readFile(new URL('./runtime-assets.json', import.meta.url), 'utf8'));
+async function download(url, sha256) {
+  const response = await fetch(url, { signal: AbortSignal.timeout(120000) });
+  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (createHash('sha256').update(bytes).digest('hex') !== sha256) {
+    throw new Error(`Integrity check failed: ${url}`);
+  }
+  return bytes;
+}
+
+// Prepare PyYAML in CI so the deployed browser runtime loads it from this site.
 const root = new URL('../node_modules/pyodide/', import.meta.url);
 const lock = JSON.parse(await readFile(new URL('pyodide-lock.json', root), 'utf8'));
 const version = JSON.parse(await readFile(new URL('package.json', root), 'utf8')).version;
 const pkg = lock.packages.pyyaml;
-if (!pkg?.file_name || !pkg.sha256) throw new Error('PyYAML missing from Pyodide lock');
-const response = await fetch(`https://cdn.jsdelivr.net/pyodide/v${version}/full/${pkg.file_name}`);
-if (!response.ok) throw new Error(`PyYAML download: HTTP ${response.status}`);
-const bytes = Buffer.from(await response.arrayBuffer());
-if (createHash('sha256').update(bytes).digest('hex') !== pkg.sha256) {
-  throw new Error('PyYAML integrity check failed');
+if (pkg?.file_name !== pinned.pyyaml.file_name || pkg.sha256 !== pinned.pyyaml.sha256) {
+  throw new Error('PyYAML differs from the reviewed runtime pin');
 }
+const bytes = await download(`https://cdn.jsdelivr.net/pyodide/v${version}/full/${pkg.file_name}`, pkg.sha256);
 await writeFile(new URL(pkg.file_name, root), bytes);
 
 // Serve the complete Python runtime from this origin, without a runtime CDN.
-const { cp } = await import('node:fs/promises');
 await mkdir('public/runtime', { recursive: true });
 await cp(root, 'public/runtime/pyodide', { recursive: true });
 await copyFile('node_modules/pandoc-wasm/src/pandoc.wasm', 'public/runtime/pandoc.wasm');
@@ -24,18 +34,28 @@ console.log(`Prepared Pyodide ${version}, verified PyYAML, and Pandoc WASM`);
 
 await copyFile('node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm', 'public/runtime/typst.wasm');
 await mkdir('public/runtime/fonts', { recursive: true });
-for (const style of ['Regular', 'Italic', 'Bold', 'BoldItalic', 'Semibold', 'SemiboldItalic']) {
-  const name = `LibertinusSerif-${style}.otf`;
-  const result = await fetch(`https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/${name}`);
-  if (!result.ok) throw new Error(`Font ${name}: HTTP ${result.status}`);
-  await writeFile(`public/runtime/fonts/${name}`, Buffer.from(await result.arrayBuffer()));
+for (const { name, url, sha256 } of pinned.fonts) {
+  await writeFile(`public/runtime/fonts/${name}`, await download(url, sha256));
 }
-await cp('/usr/share/fonts/truetype/liberation2', 'public/runtime/fonts', { recursive: true });
+// Use the reviewed font release, independent of the runner's system packages.
+const temporary = await mkdtemp(join(tmpdir(), 'book4matter-fonts-'));
+try {
+  const archive = join(temporary, 'fonts.tar.gz');
+  await writeFile(archive, await download(pinned.liberation.url, pinned.liberation.sha256));
+  const names = ['Sans', 'Serif', 'Mono'].flatMap(family =>
+    ['Regular', 'Italic', 'Bold', 'BoldItalic'].map(style => `Liberation${family}-${style}.ttf`));
+  const prefix = `liberation-fonts-ttf-${pinned.liberation.version}`;
+  // Extract only the expected data files, including the font license.
+  execFileSync('tar', ['-xzf', archive, '-C', temporary,
+    ...[...names, 'LICENSE'].map(name => `${prefix}/${name}`)]);
+  for (const name of names) await copyFile(join(temporary, prefix, name), `public/runtime/fonts/${name}`);
+  await copyFile(join(temporary, prefix, 'LICENSE'), 'public/runtime/fonts/Liberation-LICENSE');
+} finally {
+  await rm(temporary, { recursive: true, force: true });
+}
 await mkdir('public/runtime/wrap-it', { recursive: true });
-for (const name of ['typst.toml', 'wrap-it.typ', 'LICENSE', 'README.md']) {
-  const result = await fetch(`https://raw.githubusercontent.com/typst/packages/main/packages/preview/wrap-it/0.1.1/${name}`);
-  if (!result.ok) throw new Error(`wrap-it ${name}: HTTP ${result.status}`);
-  await writeFile(`public/runtime/wrap-it/${name}`, Buffer.from(await result.arrayBuffer()));
+for (const { name, url, sha256 } of pinned.wrapIt) {
+  await writeFile(`public/runtime/wrap-it/${name}`, await download(url, sha256));
 }
 
 // The upstream wrapper fixes WASI's environment to []. Make that an explicit
