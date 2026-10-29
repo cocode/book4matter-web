@@ -4,13 +4,14 @@ import { createPandocInstance } from './generated/pandoc-core.js';
 import { createTypstCompiler, CompileFormatEnum } from '@myriaddreamin/typst.ts/compiler';
 import { loadFonts, withPackageRegistry } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 
-export async function buildBook(uploadedFiles, format, { assetURL, get, log }) {
+export async function buildBook(uploadedFiles, format, { assetURL, get, log, runtimeDirectory }) {
   if (!['print', 'screen', 'html', 'epub'].includes(format)) throw new Error(`Unknown format: ${format}`);
   if (!uploadedFiles.length) throw new Error('Add your chapter files first.');
   log('Loading local Python and publishing assets…');
   const runtimeURL = assetURL('runtime/pyodide/pyodide.mjs');
   const { loadPyodide } = await import(/* @vite-ignore */ runtimeURL);
-  const python = await loadPyodide({ indexURL: assetURL('runtime/pyodide/'),
+  // Browsers use an HTTP URL; Pyodide's Node loader needs a filesystem path.
+  const python = await loadPyodide({ indexURL: runtimeDirectory ?? assetURL('runtime/pyodide/'),
     stdout: log, stderr: log });
   await python.loadPackage('pyyaml');
   const manifest = JSON.parse(await get('assets.json'));

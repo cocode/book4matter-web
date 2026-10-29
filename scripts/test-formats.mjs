@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 
 const format = process.argv[2];
@@ -25,6 +26,7 @@ if (!format) {
   const logs = [];
   const result = await buildBook(files, format === 'defaults' ? 'print' : format, {
     assetURL: path => new URL(path, root).href,
+    runtimeDirectory: fileURLToPath(new URL('runtime/pyodide/', root)),
     get: async (path, binary = false) => {
       const bytes = await readFile(new URL(path, root));
       return binary ? new Uint8Array(bytes) : bytes.toString('utf8');
