@@ -66,5 +66,20 @@ if (!core.includes('createPandocInstance(wasmBinary)') || !core.includes('const 
 }
 core = core.replace('createPandocInstance(wasmBinary)', 'createPandocInstance(wasmBinary, environment = {})')
   .replace('const env = []', 'const env = Object.entries(environment).map(([key, value]) => `${key}=${value}`)');
+// The upstream addFile puts slash-containing names in a flat Map. Build real
+// directories so resources, metadata, and duplicate basenames remain usable.
+const flatWrite = 'fileSystem.set(filename, file)';
+if (core.split(flatWrite).length !== 2) throw new Error('Pandoc filesystem adapter changed; review nested paths');
+core = core.replace(flatWrite, `
+            const parts = filename.replace(/^\\/+/, '').split('/')
+            if (parts.some(part => !part || part === '.' || part === '..')) throw new Error('Invalid WASI path: ' + filename)
+            let directory = fileSystem
+            for (const part of parts.slice(0, -1)) {
+                if (!directory.has(part)) directory.set(part, new Directory(new Map()))
+                const child = directory.get(part)
+                if (!(child instanceof Directory)) throw new Error('WASI file/directory conflict: ' + filename)
+                directory = child.contents
+            }
+            directory.set(parts.at(-1), file)`);
 await mkdir('src/generated', { recursive: true });
 await writeFile('src/generated/pandoc-core.js', core);

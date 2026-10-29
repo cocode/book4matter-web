@@ -2,3 +2,29 @@
 .upload{margin-top:28px;padding:30px 36px;border:1px solid #d9ddcf;background:#fffdf8}.upload h2{font:normal 31px/1.2 Georgia,serif;margin:12px 0}.upload>p:not(.eyebrow){font-size:14px;color:#657266;max-width:660px}.folder-label{display:block;font-size:13px;font-weight:600;margin:20px 0 8px}input[type=file]{max-width:100%;font:13px system-ui}input::file-selector-button{border:1px solid #83917c;background:#e8eddc;padding:10px 14px;color:#233d34;cursor:pointer;margin-right:12px}#project-info{font-size:12px}.upload code{font-size:12px}@media(max-width:700px){.upload{padding:24px}}
 
 .build-result{padding:18px 0 0}.build-result #status{margin-bottom:0}
+header{flex-wrap:wrap;gap:18px}.header-links{display:flex;align-items:center;flex-wrap:wrap;gap:20px;font-size:13px}.header-links a{text-underline-offset:3px}
+
+/* Additive uploads and output choices. Native inputs remain keyboard accessible. */
+.drop-zone{border:1px dashed #83917c;background:#f5f6ef;padding:28px;margin:24px 0 16px;text-align:center;transition:background .15s,border-color .15s}
+.drop-zone.drag-over{background:#e0ead8;border:2px solid #304b3e;padding:27px}
+.drop-zone[aria-busy=true]{opacity:.7}
+.drop-heading{font:normal 23px/1.3 Georgia,serif;margin:0 0 8px}
+#upload-help{font-size:13px;color:#657266;margin:0 0 20px}
+.file-pickers{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
+.file-picker{position:relative;display:inline-block;overflow:hidden;background:#304b3e;color:white;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.file-picker input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px}
+.file-picker:focus-within,button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #a8753d;outline-offset:4px}
+.secondary{background:#e8eddc;color:#233d34;border:1px solid #b8c2ae}
+button:disabled{cursor:default;opacity:.5}
+#upload-message{font-size:12px;min-height:1em}
+#added-files{padding:4px 0 16px;font-size:13px}
+#file-list{list-style:none;padding:0;max-height:280px;overflow:auto}
+#file-list li{display:flex;align-items:center;gap:12px;border-bottom:1px solid #e0e3d9;padding:9px 0}
+#file-list li>span{flex:1;min-width:0;overflow-wrap:anywhere}
+#file-list small{color:#657266;font-size:11px}
+.remove-file{background:transparent;color:#304b3e;padding:8px;font-size:12px;text-decoration:underline}
+.upload .file-hint{font-size:12px;line-height:1.7}
+.format-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:24px}
+.format-grid button{text-align:left;padding:18px 20px;line-height:1.5}
+.format-grid button span{display:block;margin:4px 0 0;font-size:11px;font-weight:400;opacity:.85}
+@media(max-width:480px){.format-grid{grid-template-columns:1fr}.drop-zone{padding:24px 16px}.drop-zone.drag-over{padding:23px 15px}#file-list small{display:none}.upload{padding:24px 18px}}

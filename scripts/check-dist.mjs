@@ -6,7 +6,11 @@ const base = process.env.VITE_BASE_PATH || '/';
 assert.ok(base.startsWith('/') && base.endsWith('/'), 'VITE_BASE_PATH must be an absolute path ending in /');
 const html = await readFile('dist/index.html', 'utf8');
 assert.ok(html.includes(`href="${base}" class="brand"`), 'Home link does not use the deployment base');
-const references = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(match => match[1]);
+// External navigation links are not deployment assets. Scripts and stylesheets
+// must still resolve to files inside the built site.
+const references = [...html.matchAll(/<([a-z][\w-]*)\b[^>]*?\b(?:src|href)="([^"]+)"/gi)]
+  .filter(([, tag, url]) => !(tag.toLowerCase() === 'a' && /^https?:\/\//.test(url)))
+  .map(([, , url]) => url);
 for (const url of references.filter(url => url !== base)) {
   assert.ok(url.startsWith(base), `Asset URL escapes the deployment base: ${url}`);
   assert.ok((await stat(`dist/${url.slice(base.length)}`)).isFile(), `Missing built asset: ${url}`);
@@ -25,5 +29,5 @@ for (const path of ['runtime/pandoc.wasm', 'runtime/typst.wasm', 'runtime/pyodid
   const bytes = await readFile(`dist/${path}`);
   assert.equal(bytes.subarray(0, 4).toString('hex'), '0061736d', `Invalid WASM file: ${path}`);
 }
-for (const path of ['browser_adapter.py', 'runtime/pyodide/pyodide.mjs']) await stat(`dist/${path}`);
+for (const path of ['browser_adapter.py', 'browser-images.lua', 'runtime/pyodide/pyodide.mjs']) await stat(`dist/${path}`);
 console.log(`PASS: static HTML URLs and ${manifest.files.length} publishing assets are ready at ${base}`);

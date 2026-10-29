@@ -91,11 +91,30 @@ try {
   await writeFile(`${fixture}/chapters/01.txt`, `${chapter}\n\nThis passage exists only in the uploaded project.\n\n# Literal heading\n\n**literal bold** and _literal emphasis_\n\n[literal link](https://example.com)\n\n[[literal term]]\n\n{index:term}\n\n    indented literal prose\n`);
   // Markdown chapters still support formatting and media in the same project.
   await writeFile(`${fixture}/chapters/06.md`, '# Markdown chapter\n\n**Formatted Markdown**\n\n![](../media/garden.svg){width="1in"}\n');
-  const invalid = await mkdtemp('/tmp/book4matter-invalid-');
+  const invalid = await mkdtemp('/tmp/book4matter-no-config-');
   await writeFile(`${invalid}/chapter.md`, '# Missing configuration');
+  async function clearUploads() {
+    await page.locator('#added-files').evaluate(element => { element.open = true; });
+    await page.locator('#clear-files').click();
+  }
+  await clearUploads();
   await page.locator('#project-folder').setInputFiles(invalid);
-  assert.ok(await page.locator('#build-upload').isDisabled());
-  assert.match(await page.locator('#project-info').innerText(), /book_metadata.yaml or book_style.yaml/);
+  assert.ok(await page.locator('#build-upload').isEnabled(), 'YAML must be optional');
+  assert.match(await page.locator('#project-info').innerText(), /1 chapter files/);
+  // A second batch adds settings without replacing the chapter.
+  await page.locator('#project-files').setInputFiles(`${fixture}/book_metadata.yaml`);
+  assert.match(await page.locator('#project-info').innerText(), /2 files added/);
+  // Two drops exercise the same UI handler used by native drag and drop.
+  await page.locator('#drop-zone').evaluate(element => {
+    for (const [name, content] of [['02.txt', 'Dropped text'], ['book_style.yaml', 'font-size: 12']]) {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([content], name, { type: 'text/plain' }));
+      element.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+    }
+  });
+  await page.waitForFunction(() => document.querySelector('#project-info').textContent.includes('4 files added'));
+  assert.match(await page.locator('#project-info').innerText(), /2 chapter files/);
+  await clearUploads();
   await page.locator('#project-folder').setInputFiles(fixture);
   assert.ok(await page.locator('#build-upload').isEnabled());
   const requests = [];
@@ -140,6 +159,7 @@ try {
     '{exercise:first:def First exercise}', '', '{exercise:first}', '',
     '## Index {.section}', '', '{index:term}', '', '{index:exercise}', '',
   ].join('\n'));
+  await clearUploads();
   await page.locator('#project-folder').setInputFiles(indexed);
   await page.locator('#build-upload').click();
   await page.waitForFunction(() => !document.querySelector('#download').hidden || document.querySelector('#status').textContent.includes('could not finish'), null, { timeout: 180000 });
@@ -170,6 +190,6 @@ try {
   assert.deepEqual(externalRequests, [], 'Indexed project requested an external service');
   assert.deepEqual(requests, [], 'Indexed project sent data to the server');
   console.log('PASS: term index PDF, aliases, subentries, heading/TOC terms, repeated terms, outbound links, tracked items');
-  console.log('PASS: folder selection, invalid-folder feedback, literal TXT alongside Markdown/media/fonts, no data upload');
+  console.log('PASS: folder selection, optional YAML, additive picks and drops, literal TXT alongside Markdown/media/fonts, no data upload');
   console.log(`PASS: browser-generated PDF (${pdf.length} bytes), no external requests`);
 } finally { await browser?.close(); server.kill('SIGTERM'); }
