@@ -2,7 +2,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chapterFiles, droppedFiles, mergeFiles, selectedFiles } from '../src/uploads.js';
 import { pandocCommand } from '../src/pandoc-command.js';
+import { secureAppURL, requireFileHashing } from '../src/secure-context.js';
+import { describeBuildError } from '../src/build-errors.js';
 const item = (path, content = '') => ({ path, file: new File([content], path.split('/').at(-1)) });
+
+test('public HTTP URL upgrades to HTTPS while preserving navigation and local development', () => {
+  assert.equal(secureAppURL('http://app.book4matter.com/?book=example#files'), 'https://app.book4matter.com/?book=example#files');
+  for (const href of ['https://app.book4matter.com/', 'http://localhost:5173/', 'http://127.0.0.1:5173/']) {
+    assert.equal(secureAppURL(href), null);
+  }
+});
+test('missing browser cryptography gives an actionable HTTPS error', () => {
+  for (const cryptoAPI of [null, {}, { subtle: {} }]) {
+    assert.throws(() => requireFileHashing(cryptoAPI), /Open https:\/\/app.book4matter.com\/ and add your files again/);
+  }
+  assert.doesNotThrow(() => requireFileHashing({ subtle: { digest() {} } }));
+});
+test('build errors retain the cause and failing step when Safari stacks omit the message', () => {
+  const error = { message: 'Unable to read chapter.md', stack: 'J@http://example.test/assets/build-worker.js:4:640' };
+  const detail = describeBuildError(error, 'reading and fingerprinting "chapter.md"');
+  assert.match(detail, /^Could not finish reading and fingerprinting "chapter.md"/);
+  assert.ok(detail.includes(error.message));
+  assert.ok(detail.includes(error.stack));
+  const standard = new Error('Missing image');
+  assert.equal(describeBuildError(standard), standard.stack);
+  assert.equal(describeBuildError('Unknown failure'), 'Unknown failure');
+  assert.equal(describeBuildError(null), 'null');
+});
 
 test('loose chapters need no YAML and accumulate with later settings', () => {
   let files = mergeFiles([], [item('10.txt'), item('2.MD')]);

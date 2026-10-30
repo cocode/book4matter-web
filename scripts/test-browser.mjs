@@ -12,6 +12,34 @@ let browser;
 try {
   for (let i = 0; i < 60; i++) { try { if ((await fetch('http://127.0.0.1:5173')).ok) break; } catch {} await new Promise(resolve => setTimeout(resolve, 250)); }
   browser = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'], headless: true });
+  // Public HTTP used to fail inside the worker at crypto.subtle.digest.
+  // Proxy the built site through a real insecure origin to cover both recovery
+  // paths without relying on localhost's secure-context exemption.
+  const insecure = await browser.newContext();
+  await insecure.route('http://book4matter.test/**', async route => {
+    const url = new URL(route.request().url());
+    const response = await insecure.request.get(`http://127.0.0.1:5173${url.pathname}${url.search}`);
+    await route.fulfill({ response });
+  });
+  const insecurePage = await insecure.newPage();
+  await insecurePage.goto('http://book4matter.test/');
+  assert.equal(await insecurePage.evaluate(() => isSecureContext), false);
+  await insecurePage.locator('#project-files').setInputFiles({ name: 'chapter.md', mimeType: 'text/plain', buffer: Buffer.from('# Test') });
+  await insecurePage.locator('#build-upload').click();
+  await insecurePage.waitForFunction(() => document.querySelector('#status').textContent.includes('could not finish'));
+  assert.match(await insecurePage.locator('#log').innerText(), /Could not finish checking browser support/);
+  assert.match(await insecurePage.locator('#log').innerText(), /Open https:\/\/app.book4matter.com\/ and add your files again/);
+  assert.ok(await insecurePage.locator('#details').getAttribute('open') !== null);
+  await insecure.route('http://app.book4matter.com/**', async route => {
+    const url = new URL(route.request().url());
+    const response = await insecure.request.get(`http://127.0.0.1:5173${url.pathname}${url.search}`);
+    await route.fulfill({ response });
+  });
+  await insecure.route('https://app.book4matter.com/**', route => route.fulfill({ contentType: 'text/html', body: '<p>Secure site reached</p>' }));
+  await insecurePage.goto('http://app.book4matter.com/?book=example#files');
+  await insecurePage.waitForURL('https://app.book4matter.com/?book=example#files');
+  await insecure.close();
+  console.log('PASS: public HTTP redirects to HTTPS; insecure builds explain the cause and recovery');
   const context = await browser.newContext({ acceptDownloads: true, timezoneId: 'America/Los_Angeles', viewport: { width: 1200, height: 1100 } });
   const externalRequests = [];
   await context.route('**/*', route => {
@@ -96,6 +124,7 @@ try {
   async function clearUploads() {
     await page.locator('#added-files').evaluate(element => { element.open = true; });
     await page.locator('#clear-files').click();
+    assert.equal(await page.locator('#file-list li').count(), 0);
   }
   await clearUploads();
   await page.locator('#project-folder').setInputFiles(invalid);
@@ -155,18 +184,22 @@ try {
     '# Index examples', '', '## [[Frame]]', '',
     '[[zebra]] [[Alpha]] [[alpha]] [[Richard Powers|Powers, Richard]]', '',
     '[[polka hold|Practice hold>polka]] [[waltz hold|Practice hold>waltz]]', '',
+    '## [[Tempo|Tempo;BPM;Beats per minute]]', '',
     '[[[R. Powers|Powers, Richard]]](https://www.richardpowers.com)', '',
     '{exercise:first:def First exercise}', '', '{exercise:first}', '',
     '## Index {.section}', '', '{index:term}', '', '{index:exercise}', '',
   ].join('\n'));
   await clearUploads();
   await page.locator('#project-folder').setInputFiles(indexed);
+  await page.waitForFunction(() => document.querySelector('#project-info').textContent.includes('Ready to build'));
+  assert.equal(await page.locator('#file-list li').count(), 2);
   await page.locator('#build-upload').click();
   await page.waitForFunction(() => !document.querySelector('#download').hidden || document.querySelector('#status').textContent.includes('could not finish'), null, { timeout: 180000 });
   if (!(await downloadLink.isVisible())) throw new Error(await page.locator('#log').innerText());
   const indexDownloadEvent = page.waitForEvent('download');
   await downloadLink.click();
   const indexDownload = await indexDownloadEvent;
+  assert.equal(indexDownload.suggestedFilename(), 'indexed-book-interior.pdf');
   const indexPdf = `${output}/${indexDownload.suggestedFilename()}`;
   await indexDownload.saveAs(indexPdf);
   const indexText = (await exec('pdftotext', ['-layout', indexPdf, '-'])).stdout;
@@ -174,12 +207,15 @@ try {
   const indexSection = indexText.slice(indexText.lastIndexOf('Alpha'));
   assert.match(indexSection, /Alpha\s*\.+\s*\d/);
   assert.match(indexSection, /Frame\s*\.+\s*\d/);
+  assert.match(indexSection, /BPM\.\s*see\s*Tempo/);
+  assert.match(indexSection, /Beats per minute\.\s*see\s*Tempo/);
   assert.match(indexSection, /Powers, Richard\s*\.+\s*\d/);
   assert.match(indexSection, /Practice hold/);
   assert.ok(indexSection.indexOf('polka') < indexSection.indexOf('waltz'));
   assert.ok(indexSection.indexOf('Powers, Richard') < indexSection.indexOf('zebra'));
   assert.match(indexSection, /First exercise/);
   assert.doesNotMatch(indexText, /\[\[|\{index:|\{exercise:/);
+  await page.locator('#details').evaluate(element => { element.open = true; });
   const indexSourcesEvent = page.waitForEvent('download');
   await page.locator('#sources').click();
   await (await indexSourcesEvent).saveAs(`${output}/index-build.json`);

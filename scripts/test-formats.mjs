@@ -22,9 +22,16 @@ if (!format) {
   const { buildBook } = await import('../src/build-book.js');
   const root = new URL('../public/', import.meta.url);
   const files = [
-    ['drafts/02.md', '# Garden\n\nMARKDOWN_CONTENT **formatted**.\n\n![Garden](../art/garden.svg)\n'],
+    ['drafts/02.md', '# Garden\n\nMARKDOWN_CONTENT **formatted**.\n\n![Garden](../art/garden.svg)\n\n'
+      + '## [[Practice hold]]\n\n## [[polka hold|Practice hold>polka;Polka grip]]\n\n'
+      + '[[[another hold|Practice hold>polka]]](https://example.com/hold)\n\n'
+      + '## [[Tempo|Tempo;BPM;Beats per minute]]\n\n'
+      + '[[[Musical speed|Tempo;BPM]]](https://example.com/tempo)\n\n'
+      + '[[Richard Powers|Powers, Richard]]\n\n'
+      + (format === 'defaults' ? '' : '{exercise:steps Practice steps}\n\nTry {exercise:steps}.\n\n{index:exercise}\n\n')
+      + '## Index {.section}\n\n{index:term}\n'],
     ['drafts/10.txt', 'LITERAL_CONTENT\n\n# literal heading\n\n**literal bold** [[literal index]] {index:term}\n'],
-    ['settings/book_metadata.yaml', 'title: Browser Formats\nauthor: Test Writer\ncover: art/garden.svg\n'],
+    ['settings/book_metadata.yaml', 'title: Browser Formats\nauthor: Test Writer\ncover: art/garden.svg\ntracked:\n  exercise: Exercise\n'],
     ['settings/book_style.yaml', 'font-size: 12\ntoc: true\n'],
     ['styles/book_style.css', 'body { color: #233d34; }'],
     ['art/garden.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="green"/></svg>'],
@@ -49,6 +56,10 @@ if (!format) {
     // emitted as #text("...") above, where the underscore stays unescaped.
     assert.match(result.sources['_body.typ'], /MARKDOWN\\_CONTENT/);
     assert.match(result.sources['_body.typ'], /\/art\/garden.svg/);
+    assert.match(result.sources['_body.typ'], /#termdef\("practice hold>polka", "polka", "idx-practice-hold-polka-1".*parent: "Practice hold", aliases: \("Polka grip",\)/);
+    assert.match(result.sources['_body.typ'], /aliases: \("BPM", "Beats per minute",\)/);
+    assert.match(result.sources['_body.typ'], /#termindex\(\)/);
+    if (format !== 'defaults') assert.match(result.sources['_body.typ'], /#tindex\("exercise"\)/);
     assert.match(result.sources['_meta.typ'], format === 'screen' ? /links: "live"/ : /links: "print"/);
     assert.match(result.sources['_meta.typ'], format === 'screen' ? /cover: "\/art\/garden.svg"/ : /cover: none/);
     assert.equal(result.name, format === 'screen' ? 'browser-formats.pdf' : format === 'defaults' ? 'project-interior.pdf' : 'browser-formats-interior.pdf');
@@ -63,6 +74,7 @@ if (!format) {
     assert.match(text, /data:image\/svg\+xml/);
     assert.match(text, /data:text\/css;base64,/);
     assert.doesNotMatch(text, /href="book_style.css"/);
+    checkIndex(text);
   } else {
     const entries = unzip(Buffer.from(result.bytes));
     assert.equal(entries.get('mimetype')?.toString(), 'application/epub+zip');
@@ -74,8 +86,26 @@ if (!format) {
     assert.match(content, /\*\*literal bold\*\*/);
     assert.match(content, /\[\[literal index\]\]/);
     assert.ok([...entries.keys()].some(name => name.endsWith('.svg')));
+    checkIndex(content);
   }
-  console.log(`PASS: ${format} build with loose chapters, literal TXT, optional YAML and nested images`);
+  console.log(`PASS: ${format} build with loose chapters, literal TXT, optional YAML, images, index aliases, subentries and tracked lists`);
+}
+
+function checkIndex(markup) {
+  const text = markup.replace(/\s+/g, ' ');
+  for (const id of ['idx-practice-hold-1', 'idx-practice-hold-polka-1', 'idx-practice-hold-polka-2', 'idx-tempo-1', 'idx-tempo-2', 'idx-powers-richard-1']) {
+    assert.equal(text.split(`id="${id}"`).length - 1, 1, `Definition ${id} must occur once, outside navigation`);
+    assert.match(text, new RegExp(`href="[^"]*#${id}"`));
+    for (const nav of text.matchAll(/<nav\b[^>]*>.*?<\/nav>/g)) assert.ok(!nav[0].includes(`id="${id}"`));
+  }
+  assert.equal(text.split('BPM. <em>see</em>').length - 1, 1, 'Repeated aliases must be deduplicated');
+  assert.match(text, /BPM\. <em>see<\/em> <a href="[^"]*#idx-tempo-1">Tempo<\/a>/);
+  assert.match(text, /Polka grip\. <em>see<\/em> <a href="[^"]*#idx-practice-hold-polka-1">Practice hold, polka<\/a>/);
+  assert.match(text, /class="index-leader"/);
+  assert.match(text, /↳/);
+  assert.match(text, /href="https:\/\/example.com\/hold"/);
+  assert.match(text, /id="trk-exercise-steps"/);
+  assert.match(text, /href="[^"]*#trk-exercise-steps"/);
 }
 
 function unzip(bytes) {

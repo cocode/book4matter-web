@@ -1,4 +1,5 @@
 import { buildBook } from './build-book.js';
+import { describeBuildError } from './build-errors.js';
 
 // The worker bundle lives in assets/, while public files use the site's base.
 const appURL = new URL(import.meta.env.BASE_URL, self.location.origin);
@@ -11,10 +12,12 @@ async function get(path, binary = false) {
 }
 
 self.onmessage = async ({ data }) => {
+  let stage = 'starting the publishing engine';
   try {
-    const result = await buildBook(data.files || [], data.format, { assetURL, get, log });
+    const result = await buildBook(data.files || [], data.format, { assetURL, get, log,
+      onStage: value => { stage = value; } });
     postMessage({ type: 'complete', ...result }, [result.bytes.buffer]);
   } catch (error) {
-    postMessage({ type: 'error', message: error.stack || String(error) });
+    postMessage({ type: 'error', message: describeBuildError(error, stage) });
   }
 };

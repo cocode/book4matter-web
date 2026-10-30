@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cocode/Book4matter
-          ref: 643c927d6a49b8c5a60d4764d535cdda5f2e485c
+          ref: ab72b88de720853b283185c63f1434c791f4260c
           path: .publishing
           persist-credentials: false
       - name: Set up pinned Node.js

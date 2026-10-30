@@ -1,12 +1,16 @@
 import { pandocCommand } from './pandoc-command.js';
 import { validPath } from './uploads.js';
+import { requireFileHashing } from './secure-context.js';
 import { createPandocInstance } from './generated/pandoc-core.js';
 import { createTypstCompiler, CompileFormatEnum } from '@myriaddreamin/typst.ts/compiler';
 import { loadFonts, withPackageRegistry } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 
-export async function buildBook(uploadedFiles, format, { assetURL, get, log, runtimeDirectory }) {
+export async function buildBook(uploadedFiles, format, { assetURL, get, log, runtimeDirectory, onStage = () => {} }) {
   if (!['print', 'screen', 'html', 'epub'].includes(format)) throw new Error(`Unknown format: ${format}`);
   if (!uploadedFiles.length) throw new Error('Add your chapter files first.');
+  onStage('checking browser support');
+  requireFileHashing();
+  onStage('loading Python');
   log('Loading local Python and publishing assets…');
   const runtimeURL = assetURL('runtime/pyodide/pyodide.mjs');
   const { loadPyodide } = await import(/* @vite-ignore */ runtimeURL);
@@ -14,6 +18,7 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
   const python = await loadPyodide({ indexURL: runtimeDirectory ?? assetURL('runtime/pyodide/'),
     stdout: log, stderr: log });
   await python.loadPackage('pyyaml');
+  onStage('loading publishing assets');
   const manifest = JSON.parse(await get('assets.json'));
   const assetPaths = manifest.files;
   const assets = new Map(await Promise.all(assetPaths.map(async path => [path, await get(path, true)])));
@@ -28,6 +33,7 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
     if (path.startsWith('book4matter/')) write('/book/' + path.slice('book4matter/'.length), bytes);
   }
   for (const { path, file } of uploadedFiles) {
+    onStage(`reading and fingerprinting "${path}"`);
     if (!validPath(path)) {
       throw new Error(`Invalid project path: ${path}`);
     }
@@ -35,6 +41,7 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
     write(`${projectRoot}/${path}`, bytes);
     provenance[`uploaded/${path}`] = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(value => value.toString(16).padStart(2, '0')).join('');
   }
+  onStage('loading document converters');
   write('/book/browser_adapter.py', await get('browser_adapter.py', true));
   const wasm = await get('runtime/pandoc.wasm', true);
   const imageFilter = await get('browser-images.lua');
@@ -48,6 +55,7 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
     dispatch: async serialized => {
       const { argv, env } = JSON.parse(serialized);
       if (argv[0] === 'pandoc') {
+        onStage('converting chapters with Pandoc');
         log('Applying the original Lua filters with Pandoc WASM…');
         const pandoc = await createPandocInstance(wasm, env);
         const { options, output } = pandocCommand(argv);
@@ -67,6 +75,7 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
         if (!artifact?.size) throw new Error(result.stderr || 'Pandoc returned no document');
         write(output, new Uint8Array(await artifact.arrayBuffer()));
       } else if (argv[0] === 'typst') {
+        onStage('compiling the PDF with Typst');
         log('Compiling the original book.typ with Typst WASM…');
         if (argv[1] !== 'compile' || argv[2] !== '--root') {
           throw new Error(`Unsupported Typst command: ${argv.join(' ')}`);
@@ -95,6 +104,7 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
       } else throw new Error(`Unsupported external tool: ${argv[0]}`);
     },
   });
+  onStage('applying publishing settings and rules');
   log('Running the existing Python publishing rules…');
   python.globals.set('browser_project_root', projectRoot);
   python.globals.set('browser_format', format);
@@ -105,6 +115,7 @@ sys.path.insert(0, '/book')
 from browser_adapter import build_project
 await build_project(browser_project_root, browser_format)
 `);
+  onStage('collecting the finished document');
   const paths = walk(`${projectRoot}/out`);
   const extension = { print: 'pdf', screen: 'pdf', html: 'html', epub: 'epub' }[format];
   if (!documentPath || !fs.analyzePath(documentPath).exists) throw new Error(`Build completed without a ${extension.toUpperCase()} file`);

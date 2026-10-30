@@ -30,6 +30,15 @@ an e-reader. Plain `.txt` content is kept literal in each output; Markdown
 formatting applies only to `.md` chapters. PDF output has an in-page preview;
 HTML and EPUB are downloads. An optional `book_style.css` is embedded in HTML.
 
+Book indexes support `[[term]]`, alternate index wording such as
+`[[Richard Powers|Powers, Richard]]`, and subentries such as
+`[[polka hold|Practice hold>polka]]`. Add “see” aliases with
+`[[Tempo|Tempo;BPM;Beats per minute]]`, then place `{index:term}` on its own line
+where the index belongs. Aliases and subentries also work in headings and
+outbound links. Print indexes show page numbers; screen PDF, HTML, and EPUB
+link to definitions. Numbered exercises, figures, and other configured tracked
+items can have their own lists, such as `{index:exercise}`.
+
 GitHub Actions prepares the pinned publishing runtimes, checks dependencies,
 tests all four output formats, and deploys the static site to GitHub Pages at
 the custom-domain root. No local installation or Docker is required. EPUB
@@ -46,3 +55,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-adapter.py ../KindlePandocCreator
 The adapter tests isolate the YAML parser and converter to test file discovery
 and engine dispatch. CI additionally runs `node scripts/test-formats.mjs` against
 the real pinned PyYAML, Pandoc WASM and Typst WASM runtimes before deployment.
+
+Publishing sources are pinned to `ab72b88de720853b283185c63f1434c791f4260c`,
+which includes index “see” aliases. The engine and templates are copied directly
+from that upstream revision.

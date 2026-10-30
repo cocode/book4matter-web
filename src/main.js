@@ -1,4 +1,9 @@
 import { chapterFiles, droppedFiles, mergeFiles, selectedFiles } from './uploads.js';
+import { secureAppURL } from './secure-context.js';
+import { describeBuildError } from './build-errors.js';
+
+const secureURL = secureAppURL(window.location.href);
+if (secureURL) window.location.replace(secureURL);
 
 const status = document.querySelector('#status');
 const download = document.querySelector('#download');
@@ -139,7 +144,7 @@ function build(format) {
   };
   try {
     worker = new Worker(new URL('./build-worker.js', import.meta.url), { type: 'module' });
-    worker.onerror = event => fail(event.message || 'The publishing engine could not load.');
+    worker.onerror = event => fail(event.error ? describeBuildError(event.error) : event.message || 'The publishing engine could not load.');
     worker.onmessage = ({ data }) => {
       if (data.type === 'log') { output.textContent += `${data.message}\n`; status.textContent = data.message; }
       else if (data.type === 'error') fail(data.message);
@@ -163,6 +168,6 @@ function build(format) {
       }
     };
     worker.postMessage({ type: 'build', files: projectFiles, format });
-  } catch (error) { fail(error.message); }
+  } catch (error) { fail(describeBuildError(error)); }
 }
 renderFiles();

@@ -54,7 +54,7 @@
   },
   "publishing": {
     "repository": "cocode/Book4matter",
-    "commit": "643c927d6a49b8c5a60d4764d535cdda5f2e485c",
+    "commit": "ab72b88de720853b283185c63f1434c791f4260c",
     "note": "First-party application source, pinned independently of the third-party release-age policy."
   },
   "runtimeManifestSha256": "6de5e80eb240f8a9dbba0e4f51fca4d672a838c8f6886f99eae31e361e94a66f",
