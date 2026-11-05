@@ -9,6 +9,7 @@ export function pandocCommand(argv) {
     else if (arg === '-t') options.to = argv[++i];
     else if (arg === '-o') output = argv[++i];
     else if (arg === '--wrap=preserve') options.wrap = 'preserve';
+    else if (arg === '--syntax-highlighting=none') options['syntax-highlighting'] = 'none';
     else if (arg === '--toc') options['table-of-contents'] = true;
     else if (['--standalone', '--section-divs', '--embed-resources'].includes(arg)) options[arg.slice(2)] = true;
     else if (arg.startsWith('--toc-depth=')) options['toc-depth'] = Number(arg.split('=')[1]);

@@ -19,7 +19,7 @@ export function mergeFiles(current, added) {
 
 export function chapterFiles(files) {
   const hasChapters = files.some(({ path }) => path.startsWith('chapters/'));
-  return files.filter(({ path }) => /\.(md|txt)$/i.test(path) &&
+  return files.filter(({ path }) => /\.(md|txt|docx)$/i.test(path) &&
     (!hasChapters || path.startsWith('chapters/')));
 }
 

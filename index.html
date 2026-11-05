@@ -1,24 +1,45 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter — Browser proof of concept</title><link rel="stylesheet" href="/src/style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter</title><link rel="stylesheet" href="/src/style.css"></head>
 <body><main>
-<header><a href="%BASE_URL%" class="brand">Book4matter<span>Browser proof of concept</span></a><div class="header-links"><a href="https://book4matter.com/" target="_blank" rel="noopener noreferrer">About Book4matter ↗</a><span class="local">Processed on your device</span></div></header>
-<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>Your words.<br>Ready to publish.</h1><p class="lede">Book4matter turns plain text and Markdown manuscripts into formatted books, handling typography, chapter layout, and page numbering. Add your chapters and create a book for print, screens, or an e-reader. Everything happens in your browser.</p></section>
+<header><a href="%BASE_URL%" class="brand">Book4matter</a><div class="header-links"><a href="https://book4matter.com/" target="_blank" rel="noopener noreferrer">About Book4matter ↗</a></div></header>
+<section class="intro"><p class="eyebrow">FROM MANUSCRIPT TO BOOK</p><h1>Your words.<br>Ready to publish.</h1><p class="lede">Book4matter turns Word, plain text, and Markdown manuscripts into formatted books, handling typography, chapter layout, and page numbering. Add your chapters and create a book for print, screens, or an e-reader. Everything happens in your browser. None of your files are uploaded to a server.</p></section>
 <section class="upload" aria-labelledby="upload-title">
 <p class="eyebrow">BUILD YOUR BOOK</p><h2 id="upload-title">Start with your chapters.</h2>
-<p>Add Markdown (.md) or plain text (.txt) files, in as many batches as you like. Add images, fonts, <code>book_metadata.yaml</code>, or <code>book_style.yaml</code> if you have them. Settings are optional.</p>
+<p>Add Word (.docx), Markdown (.md), or plain text (.txt) files, in as many batches as you like. Add images, fonts, <code>book_metadata.yaml</code>, or <code>book_style.yaml</code> if you have them. If your files include or reference files in other directories, we recommend adding the whole book folder so relative paths still work. No settings files? Enter your book details below; we’ll use default styling.</p>
 <div id="drop-zone" class="drop-zone" role="group" aria-label="Add manuscript files" aria-describedby="upload-help">
 <p class="drop-heading">Drop your files or folders here</p>
 <p id="upload-help">Chapters now, settings later. Your files stay on your device.</p>
 <div class="file-pickers">
 <label class="file-picker">Add files<input id="project-files" type="file" multiple aria-label="Add files" aria-describedby="project-info"></label>
 <label class="file-picker secondary">Add a folder<input id="project-folder" type="file" webkitdirectory multiple aria-label="Add a folder" aria-describedby="project-info"></label>
+<button id="clear-files" type="button" class="file-picker secondary" hidden disabled>Start over</button>
 </div>
 </div>
 <p id="project-info" role="status">No files added yet.</p>
 <p id="upload-message" role="status"></p>
-<details id="added-files" hidden><summary>Review added files</summary><ul id="file-list"></ul><button id="clear-files" type="button" class="secondary" disabled>Clear files</button></details>
-<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise all .md and .txt files are included.</p>
+<details id="added-files" hidden><summary>Review added files</summary><ul id="file-list"></ul></details>
+<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise all .docx, .md, and .txt files are included. Word content and embedded images are imported; your book uses Book4matter’s layout.</p>
+<section id="book-details" aria-labelledby="book-details-title" hidden>
+<h3 id="book-details-title">Tell us about your book</h3>
+<p>No <code>book_metadata.yaml</code> added. Enter your title and author to get started.</p>
+<form id="metadata-form">
+<div class="metadata-fields">
+<label>Book title <span>(required)</span><input id="book-title" name="title" required autocomplete="off"></label>
+<label>Author name <span>(required)</span><input id="book-author" name="author" required autocomplete="name"></label>
+<label class="subtitle-field">Subtitle <span>(optional)</span><input id="book-subtitle" name="subtitle" autocomplete="off"></label>
+</div>
+</form>
+</section>
+<p id="settings-info" class="file-hint" hidden></p>
+<aside id="metadata-reminder" hidden><p>Keep your book details for next time. Download <code>book_metadata.yaml</code> and add it with your chapters on your next visit.</p><a id="download-metadata" download="book_metadata.yaml">Download book_metadata.yaml ↓</a></aside>
+<section id="build-error" class="build-error" role="alert" aria-labelledby="build-error-title" tabindex="-1" hidden>
+<h3 id="build-error-title"></h3>
+<p id="build-error-message"></p>
+<ul id="build-error-files"></ul>
+<p id="build-error-file-help">If your book uses images or other included files, <strong>add the whole book folder</strong> to keep the file paths together. You can also add missing files individually. Your chapters and book details are still here.</p>
+<div class="error-actions"><button id="build-error-add-folder" type="button">Add a folder</button><button id="build-error-add-files" type="button" class="secondary">Add files</button><button id="build-error-details" type="button" class="remove-file">Show build details</button></div>
+</section>
 <div class="format-grid" role="group" aria-label="Choose an output format">
 <button id="build-upload" data-format="print" disabled>Build my print PDF <span>Print interior, ready for binding</span></button>
 <button data-format="screen" disabled>Build my screen PDF <span>Clickable links and optional cover</span></button>
@@ -26,7 +47,7 @@
 <button data-format="epub" disabled>Build my EPUB <span>Reflowable text for e-readers</span></button>
 </div>
 </section>
-<section class="build-result" aria-label="Build result"><a id="download" hidden>Download PDF ↓</a><p id="status" role="status" aria-live="polite">Add your chapters to get started.</p></section>
+<section class="build-result" aria-label="Build result"><a id="download" hidden>Download PDF ↓</a><button id="cancel-build" type="button" class="secondary" hidden>Cancel build</button><p id="status" role="status" aria-live="polite">Add your chapters to get started.</p></section>
 <details id="details"><summary>Build details</summary><pre id="log" aria-label="Build log"></pre><a id="sources" hidden>Download build sources and details</a></details>
 <section id="preview-section" hidden><h2>Your book, ready to read.</h2><iframe id="preview" title="Generated book PDF"></iframe></section>
 <footer>PDF · HTML · EPUB · Your files stay in the browser · No server-side conversion</footer>

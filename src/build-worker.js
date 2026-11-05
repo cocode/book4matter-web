@@ -15,9 +15,12 @@ self.onmessage = async ({ data }) => {
   let stage = 'starting the publishing engine';
   try {
     const result = await buildBook(data.files || [], data.format, { assetURL, get, log,
-      onStage: value => { stage = value; } });
+      onStage: value => { stage = value; log(`Build step: ${value}`); } });
     postMessage({ type: 'complete', ...result }, [result.bytes.buffer]);
   } catch (error) {
     postMessage({ type: 'error', message: describeBuildError(error, stage) });
   }
 };
+
+// Confirm startup so the page can recover if module loading stalls.
+postMessage({ type: 'ready' });

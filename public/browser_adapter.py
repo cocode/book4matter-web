@@ -75,7 +75,7 @@ make_async("build_html", {"run_chapter_pandoc"}, 1)
 make_async("build_epub", {"run_chapter_pandoc", "run"}, 2)
 
 
-def discover_project(root):
+def discover_project(root, chapter_paths=None):
     """Read optional configs anywhere, retaining the uploaded directory tree."""
     files = sorted(p for p in root.rglob("*") if p.is_file())
     cfg = {}
@@ -103,7 +103,9 @@ def discover_project(root):
         matches = [p for p in files if p.name == Path(reference).name]
         if len(matches) == 1:
             return matches[0]
-        raise ValueError(f"Cannot find a unique uploaded file for {reference!r}.")
+        raise ValueError("BOOK4MATTER_FILES:" + json.dumps({"problems": [{
+            "kind": "missing" if not matches else "ambiguous", "reference": reference,
+        }]}))
 
     for key in ("cover", "html-body-end"):
         if cfg.get(key):
@@ -115,16 +117,23 @@ def discover_project(root):
 
     # The upload is authoritative, including when settings still contain a CLI
     # chapters list referring to a different local directory structure.
-    chapters = [p for p in files if is_chapter(p)]
-    chapters.sort(key=lambda p: (engine._natural_key(p), str(p)))
+    if chapter_paths is None:
+        chapters = [p for p in files if is_chapter(p)]
+        chapters.sort(key=lambda p: (engine._natural_key(p), str(p)))
+    else:
+        # The browser has already selected and ordered the uploaded chapters,
+        # replacing DOCX entries with converted Markdown and extracted media.
+        chapters = [Path(path).resolve() for path in chapter_paths]
+        if any(not p.is_relative_to(root) or p not in files for p in chapters):
+            raise ValueError("A selected chapter is missing from the project.")
     if not chapters:
         raise ValueError("Add at least one .md or .txt chapter (inside chapters/ if that folder is present).")
     return cfg, chapters, files
 
 
-async def build_project(bookdir, format="print"):
+async def build_project(bookdir, format="print", chapter_paths=None):
     root = Path(bookdir).resolve()
-    cfg, chapters, files = discover_project(root)
+    cfg, chapters, files = discover_project(root, chapter_paths)
     slug = engine.slugify(cfg["title"]) if cfg.get("title") else root.name
     extension = {"print": "-interior.pdf", "screen": ".pdf", "html": ".html", "epub": ".epub"}.get(format)
     if extension is None:

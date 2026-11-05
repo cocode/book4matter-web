@@ -3,6 +3,15 @@
 local files = pandoc.json.decode(os.getenv('BF_WEB_FILES') or '[]')
 local dirs = pandoc.json.decode(os.getenv('BF_WEB_CHAPTER_DIRS') or '[]')
 local root = os.getenv('BF_WEB_ROOT') or '/book/project'
+local problems = {}
+local seen = {}
+local function problem(kind, reference)
+  local key = kind .. ':' .. reference
+  if not seen[key] then
+    seen[key] = true
+    table.insert(problems, {kind = kind, reference = reference})
+  end
+end
 local available = {}
 for _, path in ipairs(files) do available[path] = true end
 
@@ -18,7 +27,8 @@ end
 function Image(image)
   if image.src:match('^data:') then return image end
   if image.src:match('^%a[%w+.-]*:') or image.src:match('^//') then
-    error('Add the image as a local file before building: ' .. image.src)
+    problem('remote', image.src)
+    return image
   end
   local src = image.src:gsub('%%(%x%x)', function(hex) return string.char(tonumber(hex, 16)) end)
   local matches = {}
@@ -41,9 +51,20 @@ function Image(image)
     end
     n, found = count()
   end
-  if n ~= 1 then error('Cannot find a unique uploaded image for: ' .. image.src) end
+  if n ~= 1 then
+    problem(n == 0 and 'missing' or 'ambiguous', image.src)
+    return image
+  end
   -- Typst resolves root-absolute paths relative to --root. Pandoc's HTML/EPUB
   -- writers read the image from the WASI filesystem instead.
   image.src = FORMAT == 'typst' and found:sub(#root + 1) or found
   return image
+end
+
+-- Report all unresolved images in this conversion, before subsequent filters.
+function Pandoc(document)
+  if #problems > 0 then
+    error('BOOK4MATTER_FILES:' .. pandoc.json.encode({problems = problems}))
+  end
+  return document
 end

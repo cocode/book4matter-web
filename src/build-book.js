@@ -1,8 +1,9 @@
 import { pandocCommand } from './pandoc-command.js';
-import { validPath } from './uploads.js';
+import { chapterFiles, validPath } from './uploads.js';
+import { missingFontFamilies } from './build-errors.js';
 import { requireFileHashing } from './secure-context.js';
 import { createPandocInstance } from './generated/pandoc-core.js';
-import { createTypstCompiler, CompileFormatEnum } from '@myriaddreamin/typst.ts/compiler';
+import { createTypstCompiler } from '@myriaddreamin/typst.ts/compiler';
 import { loadFonts, withPackageRegistry } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 
 export async function buildBook(uploadedFiles, format, { assetURL, get, log, runtimeDirectory, onStage = () => {} }) {
@@ -51,6 +52,42 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
     return fs.isDir(fs.stat(path).mode) ? walk(path) : [path];
   });
 
+  // Convert Word chapters once, preserving the original mixed-file order.
+  // A private generated directory keeps media from different DOCX files apart.
+  const selectedChapters = chapterFiles(uploadedFiles);
+  let importDirectory = '_word-imports';
+  while (uploadedFiles.some(({ path }) => path === importDirectory || path.startsWith(`${importDirectory}/`))) importDirectory += '_';
+  const chapterPaths = [];
+  let wordPandoc;
+  for (const [index, { path }] of selectedChapters.entries()) {
+    if (!/\.docx$/i.test(path)) {
+      chapterPaths.push(`${projectRoot}/${path}`);
+      continue;
+    }
+    onStage(`importing Word document "${path}"`);
+    log(`Importing Word document: ${path}`);
+    const pandoc = wordPandoc ??= await createPandocInstance(wasm);
+    const mediaDirectory = `${importDirectory}/${index}`;
+    const result = await pandoc.convert({
+      from: 'docx', to: 'markdown', wrap: 'none',
+      // Word restarts footnote numbering in every document.
+      'identifier-prefix': `${importDirectory}-${index}-`,
+      'input-files': ['input.docx'], 'output-file': 'chapter.md',
+      'extract-media': mediaDirectory,
+    }, null, { 'input.docx': new Blob([fs.readFile(`${projectRoot}/${path}`)]) });
+    if (result.stderr) log(result.stderr);
+    for (const warning of result.warnings || []) log(JSON.stringify(warning));
+    const markdown = result.files['chapter.md'];
+    if (!markdown?.size) throw new Error(`Could not import "${path}". ${result.stderr || 'The Word document contains no readable text.'}`);
+    for (const [mediaPath, blob] of Object.entries(result.mediaFiles || {})) {
+      if (!validPath(mediaPath) || !mediaPath.startsWith(`${mediaDirectory}/`)) throw new Error(`Unexpected Word media path: ${mediaPath}`);
+      write(`${projectRoot}/${mediaPath}`, new Uint8Array(await blob.arrayBuffer()));
+    }
+    const chapterPath = `${projectRoot}/${mediaDirectory}/chapter.md`;
+    write(chapterPath, new Uint8Array(await markdown.arrayBuffer()));
+    chapterPaths.push(chapterPath);
+  }
+
   python.registerJsModule('book4matter_backend', {
     dispatch: async serialized => {
       const { argv, env } = JSON.parse(serialized);
@@ -96,9 +133,18 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
           if (name.startsWith('runtime/wrap-it/')) compiler.mapShadow('/packages/wrap-it/' + name.split('/').at(-1), bytes);
         }
         for (const path of walk(projectRoot)) compiler.mapShadow(path, fs.readFile(path));
-        const result = await compiler.compile({ mainFilePath: argv[position], root: argv[3],
-          format: CompileFormatEnum.pdf, diagnostics: 'unix' });
+        // PDF export omits warnings when it succeeds. Compile in the same
+        // snapshot first so missing configured fonts cannot be substituted silently.
+        const result = await compiler.runWithWorld({ mainFilePath: argv[position], root: argv[3] }, async world => {
+          const compiled = await world.compile({ diagnostics: 'unix' });
+          if (compiled.hasError || missingFontFamilies(compiled.diagnostics).length) return compiled;
+          const pdf = await world.pdf({ diagnostics: 'unix' });
+          return { ...pdf, diagnostics: [...(compiled.diagnostics || []), ...(pdf.diagnostics || [])] };
+        });
         if (result.diagnostics?.length) log(result.diagnostics.join('\n'));
+        if (missingFontFamilies(result.diagnostics).length) {
+          throw new Error('The PDF requires fonts that were not added.\n' + result.diagnostics.join('\n'));
+        }
         if (!result.result) throw new Error(result.diagnostics?.join('\n') || 'Typst returned no PDF');
         write(argv[position + 1], result.result);
       } else throw new Error(`Unsupported external tool: ${argv[0]}`);
@@ -108,12 +154,13 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
   log('Running the existing Python publishing rules…');
   python.globals.set('browser_project_root', projectRoot);
   python.globals.set('browser_format', format);
+  python.globals.set('browser_chapters_json', JSON.stringify(chapterPaths));
   const documentPath = await python.runPythonAsync(`
-import os, sys
+import os, sys, json
 os.environ['BF_TEMPLATES'] = '/book/templates'
 sys.path.insert(0, '/book')
 from browser_adapter import build_project
-await build_project(browser_project_root, browser_format)
+await build_project(browser_project_root, browser_format, json.loads(browser_chapters_json))
 `);
   onStage('collecting the finished document');
   const paths = walk(`${projectRoot}/out`);

@@ -135,7 +135,6 @@ try {
   const invalid = await mkdtemp('/tmp/book4matter-no-config-');
   await writeFile(`${invalid}/chapter.md`, '# Missing configuration');
   async function clearUploads() {
-    await page.locator('#added-files').evaluate(element => { element.open = true; });
     await page.locator('#clear-files').click();
     assert.equal(await page.locator('#file-list li').count(), 0);
   }
