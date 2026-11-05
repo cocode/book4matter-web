@@ -58,28 +58,4 @@ for (const { name, url, sha256 } of pinned.wrapIt) {
   await writeFile(`public/runtime/wrap-it/${name}`, await download(url, sha256));
 }
 
-// The upstream wrapper fixes WASI's environment to []. Make that an explicit
-// factory argument so the original Lua os.getenv calls work unchanged.
-let core = await readFile('node_modules/pandoc-wasm/src/core.js', 'utf8');
-if (!core.includes('createPandocInstance(wasmBinary)') || !core.includes('const env = []')) {
-  throw new Error('Pandoc wrapper changed: review the environment adapter');
-}
-core = core.replace('createPandocInstance(wasmBinary)', 'createPandocInstance(wasmBinary, environment = {})')
-  .replace('const env = []', 'const env = Object.entries(environment).map(([key, value]) => `${key}=${value}`)');
-// The upstream addFile puts slash-containing names in a flat Map. Build real
-// directories so resources, metadata, and duplicate basenames remain usable.
-const flatWrite = 'fileSystem.set(filename, file)';
-if (core.split(flatWrite).length !== 2) throw new Error('Pandoc filesystem adapter changed; review nested paths');
-core = core.replace(flatWrite, `
-            const parts = filename.replace(/^\\/+/, '').split('/')
-            if (parts.some(part => !part || part === '.' || part === '..')) throw new Error('Invalid WASI path: ' + filename)
-            let directory = fileSystem
-            for (const part of parts.slice(0, -1)) {
-                if (!directory.has(part)) directory.set(part, new Directory(new Map()))
-                const child = directory.get(part)
-                if (!(child instanceof Directory)) throw new Error('WASI file/directory conflict: ' + filename)
-                directory = child.contents
-            }
-            directory.set(parts.at(-1), file)`);
-await mkdir('src/generated', { recursive: true });
-await writeFile('src/generated/pandoc-core.js', core);
+await import('./prepare-pandoc.mjs');

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { chapterFiles, droppedFiles, mergeFiles, selectedFiles } from '../src/uploads.js';
 import { pandocCommand } from '../src/pandoc-command.js';
 import { secureAppURL, requireFileHashing } from '../src/secure-context.js';
-import { describeBuildError } from '../src/build-errors.js';
+import { describeBuildError, referencedFileProblems, missingBookSettings, missingFontFamilies } from '../src/build-errors.js';
 const item = (path, content = '') => ({ path, file: new File([content], path.split('/').at(-1)) });
 
 test('public HTTP URL upgrades to HTTPS while preserving navigation and local development', () => {
@@ -83,8 +83,35 @@ test('EPUB command preserves binary output, directories, CSS, metadata and cover
   assert.equal(options['toc-depth'], 3);
 });
 test('HTML uses embedded resources; unexpected engine flags fail visibly', () => {
-  const { options } = pandocCommand(['pandoc', 'one.md', '-f', 'markdown', '-t', 'html5', '--standalone', '--section-divs', '--embed-resources', '--metadata', 'title=A=B', '-o', 'book.html']);
+  const { options } = pandocCommand(['pandoc', 'one.md', '-f', 'markdown', '-t', 'html5', '--standalone', '--section-divs', '--embed-resources', '--syntax-highlighting=none', '--metadata', 'title=A=B', '-o', 'book.html']);
   assert.equal(options.metadata.title, 'A=B');
+  assert.equal(options['syntax-highlighting'], 'none');
   assert.equal(options['embed-resources'], true);
   assert.throws(() => pandocCommand(['pandoc', '--unknown']), /Unsupported Pandoc flag/);
+});
+
+test('Word chapters mix with text in natural order and respect the chapters folder', () => {
+  const files = mergeFiles([], [item('10.docx'), item('2.MD'), item('1.DOCX'), item('3.txt'), item('old.doc')]);
+  assert.deepEqual(chapterFiles(files).map(f => f.path), ['1.DOCX', '2.MD', '3.txt', '10.docx']);
+  assert.deepEqual(chapterFiles(mergeFiles(files, [item('chapters/1.docx')])).map(f => f.path), ['chapters/1.docx']);
+});
+
+test('referenced file errors retain paths without exposing tracebacks as guidance', () => {
+  const problems = [{ kind: 'missing', reference: 'media/a "quoted" image.png' }, { kind: 'ambiguous', reference: 'cover.png' }, { kind: 'remote', reference: 'https://example.com/photo.png' }];
+  assert.deepEqual(referencedFileProblems(`PythonError: ERROR: filter.lua:5: BOOK4MATTER_FILES:${JSON.stringify({ problems })}\nstack traceback:\nother details`), problems);
+  assert.deepEqual(referencedFileProblems('Unrelated runtime failure'), []);
+  assert.deepEqual(referencedFileProblems('BOOK4MATTER_FILES:invalid'), []);
+  assert.deepEqual(referencedFileProblems('BOOK4MATTER_FILES:{"problems":[null,{"kind":"missing","reference":42}]}'), []);
+});
+
+test('missing numbering settings get actionable guidance instead of a bare exit code', () => {
+  assert.equal(missingBookSettings("tracked.lua: tracked definition {exercise:one:def One} uses kind 'exercise', which is not registered in book_metadata.yaml `tracked:`. Add it there.\nexit with exit code 1"), 'exercise');
+  assert.equal(missingBookSettings("tracked.lua: unknown tracked kind in {index:figure}; add 'figure' to book_metadata.yaml `tracked:`"), 'figure');
+  assert.equal(missingBookSettings('exit with exit code 1'), null);
+});
+
+test('missing font families are collected from compiler diagnostics without duplicates', () => {
+  assert.deepEqual(missingFontFamilies(['/book/project/out/book.typ:1:1: warning: unknown font family: eb garamond', 'warning: unknown font family: cormorant', 'warning: unknown font family: eb garamond']), ['eb garamond', 'cormorant']);
+  assert.deepEqual(missingFontFamilies('Other compilation error'), []);
+  assert.deepEqual(missingFontFamilies(undefined), []);
 });

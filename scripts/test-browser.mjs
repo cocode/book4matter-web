@@ -25,6 +25,19 @@ try {
   await insecurePage.goto('http://book4matter.test/');
   assert.equal(await insecurePage.evaluate(() => isSecureContext), false);
   await insecurePage.locator('#project-files').setInputFiles({ name: 'chapter.md', mimeType: 'text/plain', buffer: Buffer.from('# Test') });
+  assert.equal(await insecurePage.locator('#book-details').isVisible(), true);
+  assert.equal(await insecurePage.locator('#build-upload').isDisabled(), true);
+  await insecurePage.locator('#book-title').fill('A New Book: "Beginnings"');
+  await insecurePage.locator('#book-author').fill('New Author');
+  await insecurePage.locator('#book-subtitle').fill('The first chapter');
+  assert.equal(await insecurePage.locator('#build-upload').isEnabled(), true);
+  assert.equal(await insecurePage.locator('#metadata-reminder').isVisible(), true);
+  const generatedMetadata = await insecurePage.locator('#download-metadata').evaluate(async link => (await fetch(link.href)).text());
+  assert.equal(generatedMetadata, `title: ${JSON.stringify('A New Book: "Beginnings"')}\nauthor: "New Author"\nsubtitle: "The first chapter"\n`);
+  await insecurePage.locator('#project-files').setInputFiles({ name: 'book_metadata.yaml', mimeType: 'text/plain', buffer: Buffer.from('title: Uploaded Book\nauthor: Uploaded Author\n') });
+  assert.equal(await insecurePage.locator('#book-details').isVisible(), false);
+  assert.equal(await insecurePage.locator('#metadata-reminder').isVisible(), false);
+  assert.match(await insecurePage.locator('#settings-info').innerText(), /Using your uploaded book_metadata.yaml/);
   await insecurePage.locator('#build-upload').click();
   await insecurePage.waitForFunction(() => document.querySelector('#status').textContent.includes('could not finish'));
   assert.match(await insecurePage.locator('#log').innerText(), /Could not finish checking browser support/);
@@ -54,7 +67,7 @@ try {
   page.on('response', response => { if (response.status() >= 400) console.error('[http]', response.status(), response.url()); });
   await page.goto('http://127.0.0.1:5173');
   assert.equal(await page.getByRole('button', { name: /Build sample PDF/ }).count(), 0);
-  assert.match(await page.locator('.lede').innerText(), /Book4matter turns plain text and Markdown/);
+  assert.match(await page.locator('.lede').innerText(), /Book4matter turns Word, plain text, and Markdown/);
   await page.locator('#project-folder').setInputFiles('/app/fixtures/novel');
   await page.locator('#build-upload').click();
   const downloadLink = page.locator('#download');
@@ -128,7 +141,10 @@ try {
   }
   await clearUploads();
   await page.locator('#project-folder').setInputFiles(invalid);
-  assert.ok(await page.locator('#build-upload').isEnabled(), 'YAML must be optional');
+  assert.ok(await page.locator('#build-upload').isDisabled(), 'Missing metadata requires book details');
+  await page.locator('#book-title').fill('New Book');
+  await page.locator('#book-author').fill('New Author');
+  assert.ok(await page.locator('#build-upload').isEnabled(), 'YAML must be optional once details are provided');
   assert.match(await page.locator('#project-info').innerText(), /1 chapter files/);
   // A second batch adds settings without replacing the chapter.
   await page.locator('#project-files').setInputFiles(`${fixture}/book_metadata.yaml`);

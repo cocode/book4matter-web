@@ -102,7 +102,7 @@ function checkIndex(markup) {
   assert.match(text, /BPM\. <em>see<\/em> <a href="[^"]*#idx-tempo-1">Tempo<\/a>/);
   assert.match(text, /Polka grip\. <em>see<\/em> <a href="[^"]*#idx-practice-hold-polka-1">Practice hold, polka<\/a>/);
   assert.match(text, /class="index-leader"/);
-  assert.match(text, /↳/);
+  assert.match(text, /class="index-label">&gt; /);
   assert.match(text, /href="https:\/\/example.com\/hold"/);
   assert.match(text, /id="trk-exercise-steps"/);
   assert.match(text, /href="[^"]*#trk-exercise-steps"/);

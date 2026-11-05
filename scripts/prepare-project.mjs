@@ -16,6 +16,17 @@ if (publishing) {
   }
 }
 
+// Keep the pinned upstream templates compatible until their next source update.
+// Newer local publishing checkouts already use this portable ASCII marker.
+for (const [name, before, after] of [
+  ['book.typ', 'if child { body = [↳ #body] }', 'if child { body = [> #body] }'],
+  ['tracked.lua', 'pandoc.Str("↳")', 'pandoc.Str(">")'],
+]) {
+  const path = `public/book4matter/templates/${name}`;
+  const source = await readFile(path, 'utf8');
+  await writeFile(path, source.replaceAll(before, after));
+}
+
 async function walk(root) {
   const files = [];
   for (const entry of await readdir(`public/${root}`, { withFileTypes: true })) {
