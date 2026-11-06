@@ -62,4 +62,4 @@ HTML and EPUB are downloads. An optional `book_style.css` is embedded in HTML.
 See https://book4matter.com/examples/docs/book4matter.html for a full manual,
 which is build with book4matter.
 
-See README-DEV.md for developer information.
+See [README-DEV.md](README-DEV.md) for build instructions.
