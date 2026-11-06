@@ -3,7 +3,7 @@
 Book4matter turns Markdown, and plain-text manuscripts into formatted books in
 your browser. Files stay on your device; there is no server-side conversion.
 The web app is available at [app.book4matter.com](https://app.book4matter.com/), with
-a command line version available at [book4matter.com](https://book4matter.com/).
+a command line version available website at [book4matter.com](https://book4matter.com/), and [github project](https://github.com/cocode/Book4matter)
 
 Add files with the file picker, select a folder, or drag files and folders into
 the drop area. Add as many batches as you need: chapters first, then settings,
