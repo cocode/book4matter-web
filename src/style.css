@@ -2,7 +2,13 @@
 .upload{margin-top:28px;padding:30px 36px;border:1px solid #d9ddcf;background:#fffdf8}.upload h2{font:normal 31px/1.2 Georgia,serif;margin:12px 0}.upload>p:not(.eyebrow){font-size:14px;color:#657266;max-width:660px}.folder-label{display:block;font-size:13px;font-weight:600;margin:20px 0 8px}input[type=file]{max-width:100%;font:13px system-ui}input::file-selector-button{border:1px solid #83917c;background:#e8eddc;padding:10px 14px;color:#233d34;cursor:pointer;margin-right:12px}#project-info{font-size:12px}.upload code{font-size:12px}@media(max-width:700px){.upload{padding:24px}}
 
 .build-result{padding:18px 0 0}.build-result #status{margin-bottom:0}
-header{flex-wrap:wrap;gap:18px}.header-links{display:flex;align-items:center;flex-wrap:wrap;gap:20px;font-size:13px}.header-links a{text-underline-offset:3px}
+header{flex-wrap:wrap;gap:18px}
+/* Shared navigation order and selected-page treatment across Book4matter. */
+.site-nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:14px;line-height:1.5}
+.site-nav a{padding:8px 12px;border-radius:7px;color:#657266;text-decoration:none}
+.site-nav a:hover{background:#e8eddc;color:#304b3e}
+.site-nav a[aria-current="page"]{background:#e8eddc;color:#304b3e;font-weight:600;box-shadow:inset 0 -2px #304b3e}
+.site-nav a:focus-visible{outline:2px solid #304b3e;outline-offset:2px}
 
 /* Additive uploads and output choices. Native inputs remain keyboard accessible. */
 .drop-zone{border:1px dashed #83917c;background:#f5f6ef;padding:28px;margin:24px 0 16px;text-align:center;transition:background .15s,border-color .15s}
