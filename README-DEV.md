@@ -19,7 +19,7 @@ Run commands in a POSIX shell (Linux, macOS, or WSL).
    git clone https://github.com/cocode/book4matter-web.git
    git clone https://github.com/cocode/Book4matter.git
    cd Book4matter
-   git checkout ab72b88de720853b283185c63f1434c791f4260c
+   git checkout 46590eba829f1d6a8fd1bb6bc72dfd42934097a5
    cd ../book4matter-web
    ```
 
