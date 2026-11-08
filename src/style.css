@@ -3,6 +3,7 @@
 
 .build-result{padding:18px 0 0}.build-result #status{margin-bottom:0}
 header{flex-wrap:wrap;gap:18px}
+.brand{display:inline-flex;align-items:center;gap:8px}
 /* Shared navigation order and selected-page treatment across Book4matter. */
 .site-nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:14px;line-height:1.5}
 .site-nav a{padding:8px 12px;border-radius:7px;color:#657266;text-decoration:none}

@@ -16,6 +16,7 @@ mkdir -p "$project_dir/dist"
 
 docker run --rm --pull never --network none --user 0:0 \
   --mount "type=bind,src=$project_dir,dst=/source,readonly" \
+  --mount "type=bind,src=$project_dir/media,dst=/app/media,readonly" \
   --mount "type=bind,src=$project_dir/dist,dst=/output" \
   --mount "type=bind,src=$publishing_dir,dst=/publishing,readonly" \
   --env "VITE_BASE_PATH=${VITE_BASE_PATH:-/}" \
