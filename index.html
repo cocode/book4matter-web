@@ -9,10 +9,16 @@
 <a href="%BASE_URL%" aria-current="page">Web app</a>
 <a href="https://github.com/cocode/book4matter-web">GitHub</a>
 </nav></header>
-<section class="intro"><H1>Format Your Manuscript for Publication</H1><p class="lede">Book4matter turns plain text, and Markdown manuscripts and even Word .docx files into formatted books, handling typography, chapter layout, and page numbering. Add your chapters and create a book for print, screens, or an e-reader. Everything happens in your browser. None of your files are uploaded to a server.</p></section>
+<section class="intro"><H1>Format Your Manuscript for Publication</H1><p class="lede">Book4matter turns plain text and Markdown manuscripts into formatted books, handling typography, chapter layout, and page numbering. Add your chapters and create a book for print, screens, or an e-reader. Everything happens in your browser. None of your files are uploaded to a server.</p></section>
 <section class="upload" aria-labelledby="upload-title">
 <p class="eyebrow">BUILD YOUR BOOK</p><h2 id="upload-title">Start with your chapters.</h2>
-<p>Add Word (.docx), Markdown (.md), or plain text (.txt) files, in as many batches as you like. Add images, fonts, <code>book_metadata.yaml</code>, or <code>book_style.yaml</code> if you have them. If your files include or reference files in other directories, we recommend adding the whole book folder so relative paths still work. No settings files? Enter your book details below; we’ll use default styling.</p>
+<p>Add your files here. <button class="upload-help-button" type="button" popovertarget="upload-tips" aria-label="Which files can I add?">?</button></p>
+<aside id="upload-tips" popover aria-label="Which files can I add?">
+  <strong>Which files can I add?</strong>
+  <p>Add Markdown (.md) or plain text (.txt) chapters in as many batches as you like. You can also add images, fonts, <code>book_metadata.yaml</code>, and <code>book_style.yaml</code>.</p>
+  <p>If your chapters reference files in other folders, add the whole book folder so those links work. Without settings files, you can enter your book details below and use the default styling.</p>
+  <button type="button" class="secondary" popovertarget="upload-tips" popovertargetaction="hide">Close</button>
+</aside>
 <div id="drop-zone" class="drop-zone" role="group" aria-label="Add manuscript files" aria-describedby="upload-help">
 <p class="drop-heading">Drop your files or folders here</p>
 <p id="upload-help">Chapters now, settings later. Your files stay on your device.</p>
@@ -25,7 +31,7 @@
 <p id="project-info" role="status">No files added yet.</p>
 <p id="upload-message" role="status"></p>
 <details id="added-files" hidden><summary>Review added files</summary><ul id="file-list"></ul></details>
-<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise all .docx, .md, and .txt files are included. Word content and embedded images are imported; your book uses Book4matter’s layout.</p>
+<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise chapters are selected from across the project.</p>
 <section id="book-details" aria-labelledby="book-details-title" hidden>
 <h3 id="book-details-title">Tell us about your book</h3>
 <p>No <code>book_metadata.yaml</code> added. Enter your title and author to get started.</p>

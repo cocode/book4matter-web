@@ -58,3 +58,23 @@ button:disabled{cursor:default;opacity:.5}
 #build-error-files li{margin:10px 0;overflow-wrap:anywhere}
 #build-error-files strong,#build-error-files span{display:block}
 .error-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.upload-help-button {
+  width: 24px;
+  height: 24px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  color: #304b3e;
+}
+#upload-tips {
+  width: min(28rem, calc(100% - 2rem));
+  padding: 20px 24px;
+  border: 1px solid #83917c;
+  border-radius: 7px;
+  background: #fffdf8;
+  color: #233d34;
+  font-size: 14px;
+}

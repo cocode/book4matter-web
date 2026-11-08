@@ -72,7 +72,7 @@ function renderFiles() {
   settingsInfo.textContent = `${missingMetadata ? 'We’ll create book_metadata.yaml from your details.' : 'Using your uploaded book_metadata.yaml.'} ${hasSettings('book_style.yaml') ? 'Using your uploaded book_style.yaml.' : 'Using default book styling.'}`;
   refreshMetadata();
   projectInfo.textContent = reading ? 'Reading added files…' : projectFiles.length
-    ? `${projectFiles.length} files added · ${chapters.length} chapter files${chapters.length ? missingMetadata && !metadataReady() ? ' · Enter book details below to continue.' : ' · Ready to build.' : ' · Add .docx, .md, or .txt chapters to continue.'}`
+    ? `${projectFiles.length} files added · ${chapters.length} chapter files${chapters.length ? missingMetadata && !metadataReady() ? ' · Enter book details below to continue.' : ' · Ready to build.' : ' · Add .md or .txt chapters to continue.'}`
     : 'No files added yet.';
   dropZone.setAttribute('aria-busy', String(building || reading > 0));
   folder.disabled = fileInput.disabled = building;
