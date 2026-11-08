@@ -131,7 +131,7 @@ def discover_project(root, chapter_paths=None):
     return cfg, chapters, files
 
 
-async def build_project(bookdir, format="print", chapter_paths=None):
+async def build_project(bookdir, format="print", chapter_paths=None, missing_kind=None, on_numbering=None):
     root = Path(bookdir).resolve()
     cfg, chapters, files = discover_project(root, chapter_paths)
     slug = engine.slugify(cfg["title"]) if cfg.get("title") else root.name
@@ -147,6 +147,21 @@ async def build_project(bookdir, format="print", chapter_paths=None):
     engine.os.environ["BF_WEB_FILES"] = json.dumps([str(p) for p in files])
     engine.os.environ["BF_WEB_ROOT"] = str(root)
     engine.os.environ["BF_WEB_CHAPTER_DIRS"] = json.dumps(list(dict.fromkeys(str(p.parent) for p in chapters)))
+    while True:
+        try:
+            await build_output(root, format, target, files)
+            return str(target)
+        except Exception as error:
+            kind = missing_kind(str(error)) if missing_kind else None
+            tracked = cfg.get("tracked") or {}
+            if not kind or kind in tracked or kind in ("index", "term") or not re.fullmatch(r"[a-z0-9-]+", kind):
+                raise
+            # Preserve labels from the style file when generating the metadata map.
+            cfg["tracked"] = {**tracked, kind: kind.capitalize()}
+            on_numbering(yaml.safe_dump({"tracked": cfg["tracked"]}, sort_keys=False))
+
+
+async def build_output(root, format, target, files):
     if format in ("print", "screen"):
         await engine.build_print(root, keep=True, links="print" if format == "print" else "live",
                                  include_cover=format == "screen")
@@ -167,4 +182,3 @@ async def build_project(bookdir, format="print", chapter_paths=None):
             data = base64.b64encode(styles[0].read_bytes()).decode("ascii")
             replacement = f'<link rel="stylesheet" href="data:text/css;base64,{data}" />\n'
         target.write_text(target.read_text().replace(link, replacement))
-    return str(target)

@@ -20,9 +20,10 @@ If a referenced image, cover, or included file is missing, a message beside the
 build buttons names it and offers **Add a folder** and **Add files**. Adding the
 whole book folder preserves relative paths. Duplicate filenames and web-hosted
 images get specific guidance; technical details remain available separately.
-Books with numbered exercises or figures also need their numbering definitions
-from the original `book_metadata.yaml`. The title/author form supplies basic
-book details; missing numbering settings are explained beside the build buttons.
+When the app creates `book_metadata.yaml` from your book details, it adds
+missing numbering definitions detected during a build. Download the updated
+settings to reuse them. If you supply your own metadata, the app flags missing
+definitions for you to edit.
 PDF builds also name missing font families beside the build buttons. Add the
 referenced `.ttf` or `.otf` files (including bold and italic styles), or add the
 whole book folder including its fonts, then retry. Fonts installed on your

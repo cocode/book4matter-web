@@ -16,6 +16,7 @@ let browser;
 try {
   browser = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'], headless: true });
   const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  page.on('dialog', dialog => dialog.accept());
   const file = (name, text) => ({ name, mimeType: 'text/plain', buffer: Buffer.from(text) });
   const setup = async (text, settings = []) => {
     await page.goto('http://127.0.0.1:8001');
@@ -84,7 +85,25 @@ try {
   await page.setViewportSize({ width: 375, height: 812 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await page.locator('#build-error').screenshot({ path: '/results/mobile-file-error.png' });
-  await setup('# Exercises\n\n{exercise:practice:def Practice}\n\nSee {exercise:practice}.');
+  const exercises = '# Exercises\n\n{exercise:practice:def Practice}\n\nSee {exercise:practice}.\n\n{figure:sketch:def Sketch}';
+  await setup(exercises, [file('book_style.yaml', 'tracked:\n  table: Custom Table\n')]);
+  await page.locator('[data-format="screen"]').click();
+  await page.waitForFunction(() => !document.querySelector('#download').hidden || !document.querySelector('#build-error').hidden, null, { timeout: 120000 });
+  assert.ok(await page.locator('#download').isVisible(), await page.locator('#log').textContent());
+  const metadata = await page.locator('#download-metadata').evaluate(async link => (await fetch(link.href)).text());
+  for (const setting of ['exercise: Exercise', 'figure: Figure', 'table: Custom Table']) assert.ok(metadata.includes(setting), metadata);
+  const warnsOnLeave = () => page.evaluate(() => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })));
+  assert.ok(await warnsOnLeave());
+  await page.locator('.brand').click();
+  assert.ok(await page.locator('#leave-book').isVisible());
+  const saving = page.waitForEvent('download');
+  await page.locator('#save-before-leaving').click();
+  assert.equal((await saving).suggestedFilename(), 'book_metadata.yaml');
+  assert.equal(await warnsOnLeave(), false);
+  await page.locator('#book-subtitle').fill('New subtitle');
+  assert.ok(await warnsOnLeave());
+  await setup(exercises.split('{figure:')[0], [file('book_metadata.yaml', 'title: Exercises\nauthor: Tester\n')]);
+  assert.equal(await warnsOnLeave(), false);
   await failBuild('screen');
   assert.match(await page.locator('#build-error-message').textContent(), /numbered “exercise”.*book_metadata.yaml/);
   const exerciseLog = await page.locator('#log').textContent();

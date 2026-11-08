@@ -15,6 +15,7 @@ self.onmessage = async ({ data }) => {
   let stage = 'starting the publishing engine';
   try {
     const result = await buildBook(data.files || [], data.format, { assetURL, get, log,
+      onNumbering: data.generatedMetadata ? tracked => postMessage({ type: 'numbering', tracked }) : undefined,
       onStage: value => { stage = value; log(`Build step: ${value}`); } });
     postMessage({ type: 'complete', ...result }, [result.bytes.buffer]);
   } catch (error) {

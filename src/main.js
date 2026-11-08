@@ -22,12 +22,52 @@ const metadataForm = document.querySelector('#metadata-form');
 const metadataInputs = [...metadataForm.querySelectorAll('input')];
 const metadataDownload = document.querySelector('#download-metadata');
 let metadataURL;
+let generatedNumbering = '';
+let downloadedMetadata;
 const hasSettings = name => projectFiles.some(({ path }) => path.split('/').at(-1) === name);
 const needsMetadata = () => !hasSettings('book_metadata.yaml');
 const metadataReady = () => metadataInputs.slice(0, 2).every(input => input.value.trim());
 function metadataText() {
-  return metadataInputs.filter(input => input.value.trim()).map(input => `${input.name}: ${JSON.stringify(input.value.trim())}`).join('\n') + '\n';
+  return metadataInputs.filter(input => input.value.trim()).map(input => `${input.name}: ${JSON.stringify(input.value.trim())}`).join('\n') + '\n' + generatedNumbering;
 }
+function warnBeforeLeaving(event) {
+  // If the reader chooses to stay, put the download link within reach.
+  metadataDownload.focus();
+  event.preventDefault();
+  event.returnValue = true;
+}
+function syncLeaveWarning() {
+  if (metadataURL && downloadedMetadata !== metadataText()) {
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+  } else {
+    window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }
+}
+metadataDownload.addEventListener('click', () => {
+  downloadedMetadata = metadataText();
+  syncLeaveWarning();
+});
+
+const leaveDialog = document.querySelector('#leave-book');
+let leaveURL;
+document.querySelector('header').addEventListener('click', event => {
+  const link = event.target.closest('a[href]');
+  if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (!metadataURL || downloadedMetadata === metadataText()) return;
+  event.preventDefault();
+  leaveURL = link.href;
+  leaveDialog.showModal();
+});
+document.querySelector('#save-before-leaving').addEventListener('click', () => {
+  metadataDownload.click();
+  leaveDialog.close();
+});
+document.querySelector('#leave-without-saving').addEventListener('click', () => {
+  leaveDialog.close();
+  window.removeEventListener('beforeunload', warnBeforeLeaving);
+  window.location.assign(leaveURL);
+});
+window.addEventListener('pageshow', syncLeaveWarning);
 function refreshMetadata() {
   if (metadataURL) URL.revokeObjectURL(metadataURL);
   metadataURL = undefined;
@@ -38,6 +78,7 @@ function refreshMetadata() {
     metadataURL = URL.createObjectURL(new Blob([metadataText()], { type: 'application/yaml' }));
     metadataDownload.href = metadataURL;
   }
+  syncLeaveWarning();
 }
 metadataForm.addEventListener('submit', event => event.preventDefault());
 for (const input of metadataInputs) input.addEventListener('input', () => {
@@ -94,6 +135,7 @@ function renderFiles() {
     remove.disabled = building || reading > 0;
     remove.addEventListener('click', () => {
       projectFiles = projectFiles.filter(item => item.path !== path);
+      if (!projectFiles.length || path.split('/').at(-1) === 'book_style.yaml') generatedNumbering = '';
       clearResult();
       renderFiles();
       status.textContent = 'Files changed. Choose a format to build again.';
@@ -114,6 +156,7 @@ function addBatch(pending) {
     try {
       const { files, error } = await settled;
       if (error) throw error;
+      if (files.some(({ path }) => path.split('/').at(-1) === 'book_style.yaml')) generatedNumbering = '';
       projectFiles = mergeFiles(projectFiles, files);
       clearResult();
       uploadMessage.textContent = files.length ? 'Files added. Add another batch whenever you like. Matching paths replace earlier files.' : 'No readable files were found. Try Add files or Add a folder.';
@@ -133,6 +176,8 @@ for (const input of [folder, fileInput]) input.addEventListener('change', () => 
 });
 clear.addEventListener('click', () => {
   projectFiles = [];
+  generatedNumbering = '';
+  downloadedMetadata = undefined;
   metadataForm.reset();
   clearResult();
   uploadMessage.textContent = '';
@@ -237,6 +282,10 @@ function build(format) {
       clearTimeout(startupTimer);
       if (data.type === 'ready') return;
       if (data.type === 'log') { output.textContent += `${data.message}\n`; status.textContent = data.message; }
+      else if (data.type === 'numbering') {
+        generatedNumbering = data.tracked;
+        refreshMetadata();
+      }
       else if (data.type === 'error') fail(data.message);
       else if (data.type === 'complete') {
         const documentURL = URL.createObjectURL(new Blob([data.bytes], { type: data.mime }));
@@ -257,7 +306,7 @@ function build(format) {
         finish();
       }
     };
-    worker.postMessage({ type: 'build', files: needsMetadata() ? [...projectFiles, { path: 'book_metadata.yaml', file: new File([metadataText()], 'book_metadata.yaml', { type: 'application/yaml' }) }] : projectFiles, format });
+    worker.postMessage({ type: 'build', generatedMetadata: needsMetadata(), files: needsMetadata() ? [...projectFiles, { path: 'book_metadata.yaml', file: new File([metadataText()], 'book_metadata.yaml', { type: 'application/yaml' }) }] : projectFiles, format });
   } catch (error) { fail(describeBuildError(error)); }
 }
 renderFiles();

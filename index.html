@@ -52,6 +52,15 @@
 </section>
 <p id="settings-info" class="file-hint" hidden></p>
 <aside id="metadata-reminder" hidden><p>Keep your book details for next time. Download <code>book_metadata.yaml</code> and add it with your chapters on your next visit.</p><a id="download-metadata" download="book_metadata.yaml">Download book_metadata.yaml ↓</a></aside>
+<dialog id="leave-book" aria-labelledby="leave-book-title">
+  <form method="dialog">
+    <h3 id="leave-book-title">Download your book settings before leaving?</h3>
+    <p>Save <code>book_metadata.yaml</code> to reuse your book details and numbering settings.</p>
+    <button id="save-before-leaving" type="button">Download settings</button>
+    <button class="secondary">Stay here</button>
+    <button id="leave-without-saving" type="button" class="remove-file">Leave without downloading</button>
+  </form>
+</dialog>
 <section id="build-error" class="build-error" role="alert" aria-labelledby="build-error-title" tabindex="-1" hidden>
 <h3 id="build-error-title"></h3>
 <p id="build-error-message"></p>

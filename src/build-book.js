@@ -1,12 +1,12 @@
 import { pandocCommand } from './pandoc-command.js';
 import { chapterFiles, validPath } from './uploads.js';
-import { missingFontFamilies } from './build-errors.js';
+import { missingBookSettings, missingFontFamilies } from './build-errors.js';
 import { requireFileHashing } from './secure-context.js';
 import { createPandocInstance } from './generated/pandoc-core.js';
 import { createTypstCompiler } from '@myriaddreamin/typst.ts/compiler';
 import { loadFonts, withPackageRegistry } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 
-export async function buildBook(uploadedFiles, format, { assetURL, get, log, runtimeDirectory, onStage = () => {} }) {
+export async function buildBook(uploadedFiles, format, { assetURL, get, log, runtimeDirectory, onNumbering, onStage = () => {} }) {
   if (!['print', 'screen', 'html', 'epub'].includes(format)) throw new Error(`Unknown format: ${format}`);
   if (!uploadedFiles.length) throw new Error('Add your chapter files first.');
   onStage('checking browser support');
@@ -155,12 +155,14 @@ export async function buildBook(uploadedFiles, format, { assetURL, get, log, run
   python.globals.set('browser_project_root', projectRoot);
   python.globals.set('browser_format', format);
   python.globals.set('browser_chapters_json', JSON.stringify(chapterPaths));
+  python.globals.set('browser_missing_kind', onNumbering ? missingBookSettings : null);
+  python.globals.set('browser_on_numbering', onNumbering ?? null);
   const documentPath = await python.runPythonAsync(`
 import os, sys, json
 os.environ['BF_TEMPLATES'] = '/book/templates'
 sys.path.insert(0, '/book')
 from browser_adapter import build_project
-await build_project(browser_project_root, browser_format, json.loads(browser_chapters_json))
+await build_project(browser_project_root, browser_format, json.loads(browser_chapters_json), browser_missing_kind, browser_on_numbering)
 `);
   onStage('collecting the finished document');
   const paths = walk(`${projectRoot}/out`);
