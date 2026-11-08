@@ -60,14 +60,24 @@ button:disabled{cursor:default;opacity:.5}
 .error-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
 .upload-help-button {
-  width: 24px;
-  height: 24px;
-  margin-left: 4px;
+  position: relative;
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  vertical-align: super;
+  font-size: 10px;
+  line-height: 12px;
   padding: 0;
   border: 1px solid currentColor;
   border-radius: 50%;
   background: transparent;
   color: #304b3e;
+}
+/* Keep the small marker easy to tap. */
+.upload-help-button::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 .help-popup {
   width: min(28rem, calc(100% - 2rem));
