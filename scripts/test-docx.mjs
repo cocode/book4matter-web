@@ -36,7 +36,7 @@ try {
   await page.locator('#project-folder').setInputFiles('/tmp/word-fixture');
   await page.locator('#book-title').fill('Word Import Test');
   await page.locator('#book-author').fill('Import Tester');
-  assert.match(await page.locator('#project-info').textContent(), /4 chapter files/);
+  assert.equal(await page.locator('[data-count="chapters"]').textContent(), '4');
   for (const format of ['print', 'screen', 'html', 'epub']) {
     await page.locator(`[data-format="${format}"]`).click();
     await page.waitForFunction(() => !document.querySelector('#download').hidden || document.querySelector('#status').textContent.includes('could not finish'), null, { timeout: 120000 });

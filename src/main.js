@@ -16,7 +16,6 @@ const fileInput = document.querySelector('#project-files');
 const dropZone = document.querySelector('#drop-zone');
 const projectInfo = document.querySelector('#project-info');
 const uploadMessage = document.querySelector('#upload-message');
-const fileList = document.querySelector('#file-list');
 const clear = document.querySelector('#clear-files');
 const metadataForm = document.querySelector('#metadata-form');
 const metadataInputs = [...metadataForm.querySelectorAll('input')];
@@ -112,38 +111,59 @@ function renderFiles() {
   settingsInfo.hidden = !projectFiles.length;
   settingsInfo.textContent = `${missingMetadata ? 'We’ll create book_metadata.yaml from your details.' : 'Using your uploaded book_metadata.yaml.'} ${hasSettings('book_style.yaml') ? 'Using your uploaded book_style.yaml.' : 'Using default book styling.'}`;
   refreshMetadata();
-  projectInfo.textContent = reading ? 'Reading added files…' : projectFiles.length
-    ? `${projectFiles.length} files added · ${chapters.length} chapter files${chapters.length ? missingMetadata && !metadataReady() ? ' · Enter book details below to continue.' : ' · Ready to build.' : ' · Add .md or .txt chapters to continue.'}`
-    : 'No files added yet.';
+  const chapterPaths = new Set(chapters.map(({ path }) => path));
+  const groups = { chapters: [], media: [], fonts: [], other: [] };
+  for (const { path, file } of projectFiles) {
+    if (chapterPaths.has(path)) groups.chapters.push(path);
+    else if (/\.(ttf|otf|ttc|woff2?)$/i.test(path) || file.type.startsWith('font/')) groups.fonts.push(path);
+    else if (/^(image|audio|video)\//.test(file.type) || /\.(png|jpe?g|gif|svg|webp|avif|tiff?|bmp|ico|heic|mp3|wav|ogg|m4a|mp4|mov|webm)$/i.test(path)) groups.media.push(path);
+    else groups.other.push(path);
+  }
+  for (const counter of projectInfo.querySelectorAll('[data-count]')) {
+    const paths = groups[counter.dataset.count];
+    counter.textContent = paths.length;
+    const category = counter.closest('details');
+    if (!paths.length) category.open = false;
+    category.querySelector('ul').replaceChildren(...paths.map(fileRow));
+  }
+  document.querySelector('#file-total').textContent = projectFiles.length
+    ? `${projectFiles.length} ${projectFiles.length === 1 ? 'file' : 'files'} added` : 'No files added yet.';
+  const readiness = document.querySelector('#file-readiness');
+  const ready = chapters.length > 0 && (!missingMetadata || metadataReady());
+  readiness.classList.toggle('ready', ready && !reading && !building);
+  if (reading) readiness.textContent = 'Reading files…';
+  else if (building) readiness.textContent = 'Building…';
+  else if (ready) readiness.textContent = 'Ready to build.';
+  else if (chapters.length) readiness.textContent = 'Enter book details below to continue.';
+  else readiness.textContent = projectFiles.length ? 'Add .md or .txt chapters to continue.' : '';
   dropZone.setAttribute('aria-busy', String(building || reading > 0));
   folder.disabled = fileInput.disabled = building;
   clear.disabled = building || reading > 0 || !projectFiles.length;
   clear.hidden = !projectFiles.length;
   for (const button of buttons) button.disabled = building || reading > 0 || !chapters.length || (missingMetadata && !metadataReady());
-  const chapterPaths = new Set(chapters.map(({ path }) => path));
-  fileList.replaceChildren(...projectFiles.map(({ path }) => {
-    const row = document.createElement('li');
-    const name = document.createElement('span');
-    name.textContent = path;
-    const kind = document.createElement('small');
-    kind.textContent = chapterPaths.has(path) ? 'Chapter' : /book_(metadata|style)\.yaml$/.test(path) ? 'Settings' : 'Supporting file';
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'remove-file';
-    remove.textContent = 'Remove';
-    remove.setAttribute('aria-label', `Remove ${path}`);
-    remove.disabled = building || reading > 0;
-    remove.addEventListener('click', () => {
-      projectFiles = projectFiles.filter(item => item.path !== path);
-      if (!projectFiles.length || path.split('/').at(-1) === 'book_style.yaml') generatedNumbering = '';
-      clearResult();
-      renderFiles();
-      status.textContent = 'Files changed. Choose a format to build again.';
-    });
-    row.append(name, kind, remove);
-    return row;
-  }));
-  document.querySelector('#added-files').hidden = !projectFiles.length;
+}
+
+function fileRow(path) {
+  const row = document.createElement('li');
+  const name = document.createElement('span');
+  name.textContent = path;
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'remove-file';
+  remove.textContent = 'Remove';
+  remove.setAttribute('aria-label', `Remove ${path}`);
+  remove.disabled = building || reading > 0;
+  remove.addEventListener('click', () => {
+    projectFiles = projectFiles.filter(item => item.path !== path);
+    if (!projectFiles.length || path.split('/').at(-1) === 'book_style.yaml') generatedNumbering = '';
+    clearResult();
+    const summary = remove.closest('details').querySelector('summary');
+    renderFiles();
+    summary.focus();
+    status.textContent = 'Files changed. Choose a format to build again.';
+  });
+  row.append(name, remove);
+  return row;
 }
 
 function addBatch(pending) {
@@ -157,11 +177,26 @@ function addBatch(pending) {
       const { files, error } = await settled;
       if (error) throw error;
       if (files.some(({ path }) => path.split('/').at(-1) === 'book_style.yaml')) generatedNumbering = '';
-      projectFiles = mergeFiles(projectFiles, files);
+      const replacedPaths = new Set();
+      projectFiles = mergeFiles(projectFiles, files, replacedPaths);
       clearResult();
-      uploadMessage.textContent = files.length ? 'Files added. Add another batch whenever you like. Matching paths replace earlier files.' : 'No readable files were found. Try Add files or Add a folder.';
+      uploadMessage.classList.toggle('duplicate-warning', replacedPaths.size > 0);
+      if (replacedPaths.size) {
+        const title = document.createElement('strong');
+        title.textContent = replacedPaths.size === 1 ? 'Duplicate file' : `Duplicate files (${replacedPaths.size})`;
+        const paths = document.createElement('ul');
+        for (const path of replacedPaths) {
+          const entry = document.createElement('li');
+          entry.textContent = path;
+          paths.append(entry);
+        }
+        uploadMessage.replaceChildren(title, ' — the last copy added at each listed path will be used.', paths);
+      } else {
+        uploadMessage.textContent = files.length ? 'Files added.' : 'No readable files were found. Try Add files or Add a folder.';
+      }
       status.textContent = 'Choose an output format when your files are ready.';
     } catch (error) {
+      uploadMessage.classList.remove('duplicate-warning');
       uploadMessage.textContent = `Could not add these files: ${error.message}`;
     } finally {
       reading--;
@@ -180,10 +215,10 @@ clear.addEventListener('click', () => {
   downloadedMetadata = undefined;
   metadataForm.reset();
   clearResult();
+  uploadMessage.classList.remove('duplicate-warning');
   uploadMessage.textContent = '';
   output.textContent = '';
   document.querySelector('#details').open = false;
-  document.querySelector('#added-files').open = false;
   status.textContent = 'Add your chapters to get started.';
   renderFiles();
   fileInput.focus();

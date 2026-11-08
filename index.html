@@ -18,8 +18,8 @@
   <button type="button" class="secondary" popovertarget="chapter-tips" popovertargetaction="hide">Close</button>
 </aside>
 <section class="upload" aria-labelledby="upload-title">
-<p class="eyebrow">BUILD YOUR BOOK</p><h2 id="upload-title">Start with your chapters.</h2>
-<p>Add your files here.<button class="upload-help-button" type="button" popovertarget="upload-tips" aria-label="Which files can I add?">?</button></p>
+<h2 id="upload-title">Add your files here.<button class="upload-help-button" type="button" popovertarget="upload-tips" aria-label="Which files can I add?">?</button></h2>
+<p>Start with your chapters.</p>
 <aside id="upload-tips" class="help-popup" popover aria-label="Which files can I add?">
   <strong>Which files can I add?</strong>
   <p>Add Markdown (.md) or plain text (.txt) chapters in as many batches as you like. You can also add images, fonts, <a href="https://book4matter.com/examples/docs/book4matter.html#the-book_metadata.yaml-file" target="_blank" rel="noopener"><code>book_metadata.yaml</code></a>, and <a href="https://book4matter.com/examples/docs/book4matter.html#the-book_style.yaml-file" target="_blank" rel="noopener"><code>book_style.yaml</code></a>.</p>
@@ -30,15 +30,34 @@
 <p class="drop-heading">Drop your files or folders here</p>
 <p id="upload-help">Chapters now, settings later. Your files stay on your device.</p>
 <div class="file-pickers">
-<label class="file-picker">Add files<input id="project-files" type="file" multiple aria-label="Add files" aria-describedby="project-info"></label>
-<label class="file-picker secondary">Add a folder<input id="project-folder" type="file" webkitdirectory multiple aria-label="Add a folder" aria-describedby="project-info"></label>
+<label class="file-picker">Add files<input id="project-files" type="file" multiple aria-label="Add files" aria-describedby="file-total file-readiness"></label>
+<label class="file-picker secondary">Add a folder<input id="project-folder" type="file" webkitdirectory multiple aria-label="Add a folder" aria-describedby="file-total file-readiness"></label>
 <button id="clear-files" type="button" class="file-picker secondary" hidden disabled>Start over</button>
 </div>
 </div>
-<p id="project-info" role="status">No files added yet.</p>
-<p id="upload-message" role="status"></p>
-<details id="added-files" hidden><summary>Review added files</summary><ul id="file-list"></ul></details>
 <p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise chapters are selected from across the project.</p>
+<div id="project-info">
+  <div class="file-overview" role="status" aria-atomic="true"><strong id="file-total">No files added yet.</strong><span id="file-readiness"></span></div>
+  <div class="file-counts">
+    <details class="count-chapters">
+      <summary><strong data-count="chapters">0</strong> Chapter files</summary>
+      <ul class="file-list"></ul>
+    </details>
+    <details class="count-media">
+      <summary><strong data-count="media">0</strong> Media files</summary>
+      <ul class="file-list"></ul>
+    </details>
+    <details class="count-fonts">
+      <summary><strong data-count="fonts">0</strong> Fonts</summary>
+      <ul class="file-list"></ul>
+    </details>
+    <details class="count-other">
+      <summary><strong data-count="other">0</strong> Other files</summary>
+      <ul class="file-list"></ul>
+    </details>
+  </div>
+</div>
+<div id="upload-message" role="status" aria-atomic="true"></div>
 <section id="book-details" aria-labelledby="book-details-title" hidden>
 <h3 id="book-details-title">Tell us about your book</h3>
 <p>No <code>book_metadata.yaml</code> added. Enter your title and author to get started.</p>

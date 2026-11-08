@@ -7,11 +7,12 @@ export function validPath(path) {
     path.split('/').every(part => part && part !== '.' && part !== '..');
 }
 
-export function mergeFiles(current, added) {
+export function mergeFiles(current, added, replacedPaths) {
   const files = new Map(current.map(item => [item.path, item]));
   for (const item of added) {
     if (!validPath(item.path)) throw new Error(`Invalid file path: ${item.path}`);
     if (item.path.split('/').some(part => ignored.has(part))) continue;
+    if (files.has(item.path)) replacedPaths?.add(item.path);
     files.set(item.path, item);
   }
   return [...files.values()].sort((a, b) => order.compare(a.path, b.path));

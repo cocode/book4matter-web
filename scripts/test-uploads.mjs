@@ -43,7 +43,12 @@ test('chapters folder takes precedence; arbitrary directories otherwise work', (
 });
 test('same paths replace earlier batches; duplicate basenames retain their paths', () => {
   const newer = item('one/chapter.md', 'new');
-  const files = mergeFiles([item('one/chapter.md'), item('two/chapter.md')], [newer]);
+  const replaced = new Set();
+  const files = mergeFiles([item('one/chapter.md'), item('two/chapter.md')], [newer], replaced);
+  assert.deepEqual([...replaced], [newer.path]);
+  const withinBatch = new Set();
+  mergeFiles([], [item('one/chapter.md'), item('two/chapter.md'), newer, newer], withinBatch);
+  assert.deepEqual([...withinBatch], [newer.path]);
   assert.equal(files.length, 2);
   assert.equal(files[0], newer);
 });

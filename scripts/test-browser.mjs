@@ -136,7 +136,7 @@ try {
   await writeFile(`${invalid}/chapter.md`, '# Missing configuration');
   async function clearUploads() {
     await page.locator('#clear-files').click();
-    assert.equal(await page.locator('#file-list li').count(), 0);
+    assert.equal(await page.locator('.file-list li').count(), 0);
   }
   await clearUploads();
   await page.locator('#project-folder').setInputFiles(invalid);
@@ -144,7 +144,7 @@ try {
   await page.locator('#book-title').fill('New Book');
   await page.locator('#book-author').fill('New Author');
   assert.ok(await page.locator('#build-upload').isEnabled(), 'YAML must be optional once details are provided');
-  assert.match(await page.locator('#project-info').innerText(), /1 chapter files/);
+  assert.equal(await page.locator('[data-count="chapters"]').textContent(), '1');
   // A second batch adds settings without replacing the chapter.
   await page.locator('#project-files').setInputFiles(`${fixture}/book_metadata.yaml`);
   assert.match(await page.locator('#project-info').innerText(), /2 files added/);
@@ -157,7 +157,7 @@ try {
     }
   });
   await page.waitForFunction(() => document.querySelector('#project-info').textContent.includes('4 files added'));
-  assert.match(await page.locator('#project-info').innerText(), /2 chapter files/);
+  assert.equal(await page.locator('[data-count="chapters"]').textContent(), '2');
   await clearUploads();
   await page.locator('#project-folder').setInputFiles(fixture);
   assert.ok(await page.locator('#build-upload').isEnabled());
@@ -207,7 +207,7 @@ try {
   await clearUploads();
   await page.locator('#project-folder').setInputFiles(indexed);
   await page.waitForFunction(() => document.querySelector('#project-info').textContent.includes('Ready to build'));
-  assert.equal(await page.locator('#file-list li').count(), 2);
+  assert.equal(await page.locator('.file-list li').count(), 2);
   await page.locator('#build-upload').click();
   await page.waitForFunction(() => !document.querySelector('#download').hidden || document.querySelector('#status').textContent.includes('could not finish'), null, { timeout: 180000 });
   if (!(await downloadLink.isVisible())) throw new Error(await page.locator('#log').innerText());

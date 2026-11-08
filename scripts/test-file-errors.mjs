@@ -78,7 +78,7 @@ try {
     }
     el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
   }, svg);
-  await page.waitForFunction(() => document.querySelector('#file-list').textContent.includes('b/picture.svg'));
+  await page.waitForFunction(() => document.querySelector('.count-media .file-list').textContent.includes('b/picture.svg'));
   await failBuild();
   assert.match(await page.locator('#build-error-files').textContent(), /More than one file matches/);
   console.log('PASS: duplicate basenames get precise-path guidance');
