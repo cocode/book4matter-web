@@ -26,7 +26,7 @@ if (!format) {
       + '## [[Practice hold]]\n\n## [[polka hold|Practice hold>polka;Polka grip]]\n\n'
       + '[[[another hold|Practice hold>polka]]](https://example.com/hold)\n\n'
       + '## [[Tempo|Tempo;BPM;Beats per minute]]\n\n'
-      + '[[[Musical speed|Tempo;BPM]]](https://example.com/tempo)\n\n'
+      + '[[[Musical speed|Tempo;BPM;Beats per minute]]](https://example.com/tempo)\n\nMeasured in [[BPM]].\n\n'
       + '[[Richard Powers|Powers, Richard]]\n\n'
       + (format === 'defaults' ? '' : '{exercise:steps Practice steps}\n\nTry {exercise:steps}.\n\n{index:exercise}\n\n')
       + '## Index {.section}\n\n{index:term}\n'],
@@ -93,14 +93,21 @@ if (!format) {
 
 function checkIndex(markup) {
   const text = markup.replace(/\s+/g, ' ');
-  for (const id of ['idx-practice-hold-1', 'idx-practice-hold-polka-1', 'idx-practice-hold-polka-2', 'idx-tempo-1', 'idx-tempo-2', 'idx-powers-richard-1']) {
+  for (const id of ['idx-practice-hold-1', 'idx-practice-hold-polka-1', 'idx-practice-hold-polka-2', 'idx-tempo-1', 'idx-tempo-2', 'idx-bpm-1', 'idx-powers-richard-1']) {
     assert.equal(text.split(`id="${id}"`).length - 1, 1, `Definition ${id} must occur once, outside navigation`);
     assert.match(text, new RegExp(`href="[^"]*#${id}"`));
     for (const nav of text.matchAll(/<nav\b[^>]*>.*?<\/nav>/g)) assert.ok(!nav[0].includes(`id="${id}"`));
   }
-  assert.equal(text.split('BPM. <em>see</em>').length - 1, 1, 'Repeated aliases must be deduplicated');
-  assert.match(text, /BPM\. <em>see<\/em> <a href="[^"]*#idx-tempo-1">Tempo<\/a>/);
-  assert.match(text, /Polka grip\. <em>see<\/em> <a href="[^"]*#idx-practice-hold-polka-1">Practice hold, polka<\/a>/);
+  for (const id of ['term-index-1-idx-tempo-1', 'term-index-1-idx-practice-hold-polka-1']) {
+    assert.equal(text.split(`id="${id}"`).length - 1, 1, `Index destination ${id} must exist exactly once`);
+  }
+  assert.equal(text.split('Beats per minute. <em>see</em>').length - 1, 1, 'Repeated aliases must be deduplicated');
+  assert.match(text, /Beats per minute\. <em>see<\/em> <a href="[^"]*#term-index-1-idx-tempo-1">Tempo<\/a>/);
+  assert.match(text, /Polka grip\. <em>see<\/em> <a href="[^"]*#term-index-1-idx-practice-hold-polka-1">Practice hold, polka<\/a>/);
+  const bpmEntry = text.match(/<li>\s*<div id="term-index-1-idx-bpm-1"[^>]*>.*?<\/li>/)?.[0];
+  assert.ok(bpmEntry, 'BPM must have its own index entry');
+  assert.match(bpmEntry, /href="[^"]*#idx-bpm-1">1<\/a>/);
+  assert.match(bpmEntry, /<em>see also<\/em> <a href="[^"]*#term-index-1-idx-tempo-1">Tempo<\/a>/);
   assert.match(text, /class="index-leader"/);
   assert.match(text, /class="index-label">&gt; /);
   assert.match(text, /href="https:\/\/example.com\/hold"/);
