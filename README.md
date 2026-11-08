@@ -1,4 +1,4 @@
-# Book4matter Web
+# <img src="docs/media/book4matter-logo.png" alt="" width="48" height="48" align="absmiddle"> Book4matter Web
 
 Book4matter turns Markdown, and plain-text manuscripts into formatted books in
 your browser. Files stay on your device; there is no server-side conversion.
