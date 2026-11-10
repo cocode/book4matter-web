@@ -2,8 +2,9 @@
 
 Book4matter turns Markdown, and plain-text manuscripts into formatted books in
 your browser. Files stay on your device; there is no server-side conversion.
-The web app is available at [app.book4matter.com](https://app.book4matter.com/), with
-a command line version available website at [book4matter.com](https://book4matter.com/), and [github project](https://github.com/cocode/Book4matter)
+To format a single manuscript, open [book4matter web](https://app.book4matter.com/),
+add the file, enter your book details, and choose an output format.
+For book4matter cmd, see the [command-line project](https://github.com/cocode/Book4matter).
 
 Add files with the file picker, select a folder, or drag files and folders into
 the drop area. Add as many batches as you need: chapters first, then settings,
@@ -60,7 +61,8 @@ formatting applies only to `.md` chapters.
 PDF output has an in-page preview;
 HTML and EPUB are downloads. An optional `book_style.css` is embedded in HTML.
 
-See https://book4matter.com/examples/docs/book4matter.html for a full manual,
-which is build with book4matter.
+The [user manual](https://book4matter.com/examples/docs/book4matter.html) covers writing and formatting in both web and cmd.
+Jump to [Markdown](https://book4matter.com/examples/docs/book4matter.html#markdown), [images](https://book4matter.com/examples/docs/book4matter.html#images-figures-and-scene-breaks),
+[table of contents settings](https://book4matter.com/examples/docs/book4matter.html#contents-settings), or [indexes](https://book4matter.com/examples/docs/book4matter.html#an-alphabetical-index-of-terms).
 
 See [README-DEV.md](README-DEV.md) for build instructions.
