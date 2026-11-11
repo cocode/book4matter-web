@@ -1,27 +1,27 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter</title><link rel="stylesheet" href="/src/style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Book4matter Web</title><link rel="stylesheet" href="/src/style.css"></head>
 <body><main>
-<header><a href="%BASE_URL%" class="brand"><img src="./media/book4matter-logo.png" width="48" height="48" alt="">Book4matter</a><nav class="site-nav" aria-label="Book4matter navigation">
+<header><a href="%BASE_URL%" class="brand"><img src="./media/book4matter-logo.png" width="48" height="48" alt="">Book4matter Web</a><nav class="site-nav" aria-label="Book4matter navigation">
 <a href="https://book4matter.com/">Home</a>
 <a href="https://book4matter.com/examples/docs/book4matter.html">User Manual</a>
 <a href="https://book4matter.com/#examples">Examples</a>
 <a href="%BASE_URL%" aria-current="page">Web app</a>
 <a href="https://github.com/cocode/book4matter-web">GitHub</a>
 </nav></header>
-<section class="intro"><H1>Format Your Manuscript for Publication</H1><p class="lede">Book4matter turns plain text and Markdown manuscripts into formatted books, handling typography, chapter layout<button class="upload-help-button" type="button" popovertarget="chapter-tips" aria-label="How do chapters work?">?</button>, and page numbering. Add your chapters and create a book for print, screens, or an e-reader. Everything happens in your browser. None of your files are uploaded to a server.</p></section>
+<section class="intro"><H1>Format Your Manuscript for Publication</H1><p class="lede">Book4matter turns plain text and <a href="https://pandoc.org/MANUAL.html#pandocs-markdown">Markdown</a> manuscripts into well-formatted PDFs, ePubs and HTML</p></section>
+<section class="upload" aria-labelledby="upload-title">
+<h2 id="upload-title">Add your files here.<button class="upload-help-button" type="button" popovertarget="upload-tips" aria-label="Which files can I add?">?</button></h2>
+<p>Start with your chapters.<button class="upload-help-button" type="button" popovertarget="chapter-tips" aria-label="How do chapters work?">?</button></p>
 <aside id="chapter-tips" class="help-popup" popover aria-labelledby="chapter-tips-title">
   <strong id="chapter-tips-title">How do chapters work?</strong>
   <p>Each plain text (.txt) file without headings becomes one chapter.</p>
-  <p>By default, <code># Chapter Title</code> starts a chapter in Markdown and <code>## Heading Title</code> Gives you a heading within chapter.</p>
+  <p>In Markdown <code># Chapter Title</code> starts a chapter and <code>## Heading Title</code> Gives you a heading. See <a href="https://book4matter.com/examples/docs/book4matter.html#markdown">User Manual</a> for more.</p>
   <button type="button" class="secondary" popovertarget="chapter-tips" popovertargetaction="hide">Close</button>
 </aside>
-<section class="upload" aria-labelledby="upload-title">
-<h2 id="upload-title">Add your files here.<button class="upload-help-button" type="button" popovertarget="upload-tips" aria-label="Which files can I add?">?</button></h2>
-<p>Start with your chapters.</p>
 <aside id="upload-tips" class="help-popup" popover aria-label="Which files can I add?">
   <strong>Which files can I add?</strong>
-  <p>Add Markdown (.md) or plain text (.txt) chapters in as many batches as you like. You can also add images, fonts, <a href="https://book4matter.com/examples/docs/book4matter.html#the-book_metadata.yaml-file" target="_blank" rel="noopener"><code>book_metadata.yaml</code></a>, and <a href="https://book4matter.com/examples/docs/book4matter.html#the-book_style.yaml-file" target="_blank" rel="noopener"><code>book_style.yaml</code></a>.</p>
+  <p>Add Markdown (.md) or plain text (.txt) chapters in as many batches as you like. You can also add images, fonts, and settings files: <a href="https://book4matter.com/examples/docs/book4matter.html#the-book_metadata.yaml-file" target="_blank" rel="noopener"><code>book_metadata.yaml</code></a>, and <a href="https://book4matter.com/examples/docs/book4matter.html#the-book_style.yaml-file" target="_blank" rel="noopener"><code>book_style.yaml</code></a>.</p>
   <p>If your chapters reference files in other folders, add the whole book folder so those links work. Without settings files, you can enter your book details below and use the default styling.</p>
   <button type="button" class="secondary" popovertarget="upload-tips" popovertargetaction="hide">Close</button>
 </aside>
@@ -34,7 +34,7 @@
 <button id="clear-files" type="button" class="file-picker secondary" hidden disabled>Start over</button>
 </div>
 </div>
-<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise chapters are selected from across the project.</p>
+<p class="file-hint">Chapters use filename order (2 before 10). A <code>chapters/</code> folder limits chapter selection to that folder; otherwise chapters are selected from across the project. For fine control, of your output, see the <a href="https://book4matter.com/examples/docs/book4matter.html" target="_blank" rel="noopener">User Manual</a>.</p>
 <div id="project-info">
   <div class="file-overview" role="status" aria-atomic="true"><strong id="file-total">No files added yet.</strong><span id="file-readiness"></span></div>
   <div class="file-counts">
